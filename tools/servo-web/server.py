@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # 调试台版本。改了前端或后端就加一：index.html 里的 PAGE_VERSION 要跟这里一样，
 # 页面连上后会比对，不一样就提示"页面是旧的，Ctrl+F5"。改动记在 README 的「版本」一节。
-VERSION = "0.15.2"
+VERSION = "0.15.4"
 DEFAULT_IDS = "20-24,30-34,10-14"
 JOINT_NAMES = {
     20: "left_hip_yaw", 21: "left_hip_roll", 22: "left_hip_pitch", 23: "left_knee", 24: "left_ankle",
@@ -247,7 +247,7 @@ LOG_DIR = os.path.join(HERE, "logs")
 LOG_CATS = ["系统", "总线", "运动", "校准", "寄存器", "姿态", "方向", "IMU"]   # 页面自己还有一类「页面」
 LEVEL_TAG = {"info": "", "warn": "[警告]", "error": "[错误]", "debug": "[调试]"}
 _log_io = threading.Lock()
-STREAM_HZ = 10
+STREAM_HZ = 50
 FAKE_STREAM_HZ = 30    # 模拟模式不占总线，推快一点，3D 动起来顺
 SPEED_UNIT = 1.0   # 速度寄存器 46 一个单位 = 多少步/秒：相位 18 BIT2=1 → 1（0.0146 rpm），BIT2=0 → 50（0.732 rpm）
 MAX_SPEED_REG = 3000   # "不限速"写多少：相位 BIT3=1 时 0 = 最快；BIT3=0 时 0 = 停，得写个大数（HD-1910 满速约 3000 步/秒）
@@ -1557,7 +1557,7 @@ def create_imu_service(args):
         return None
     if imu_bus:
         from imu_bus import BusImuService
-        # 跟 stream() 实际读总线的频率一致：模拟 30 Hz、真串口 10 Hz（启动时没给串口也按模拟算）
+        # 跟 stream() 实际读总线的频率一致：模拟 30 Hz、真串口 50 Hz（启动时没给串口也按模拟算）
         return BusImuService(poll_hz=FAKE_STREAM_HZ if args.fake or not args.port else STREAM_HZ)
     from imu_bridge import BridgeService, DEFAULT_FIRMWARE, validate_probe_settings
     if args.imu_demo:
