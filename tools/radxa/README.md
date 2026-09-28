@@ -1,8 +1,8 @@
 # Radxa Zero 3W · 做一张能直接开机的 Armbian 卡
 
 配合 [不打 HAT · 第 1 步](../../docs/不打HAT.md#第-1-步--主控点亮什么都别接) 用。
-**V1.12 板（2024-11 以后买的，WiFi 是 AIC8800）用 Armbian 官方镜像直接烧是起不来的**：灯双闪、永远进不了系统。
-原因是 Armbian 给这块板配的主线 U-Boot（内存初始化固件 2024-01 的 v1.21）带不起新板，换成瑞莎自家的引导程序就好。
+此前本机 V1.12 板（AIC8800 Wi-Fi）使用所测 Armbian 原版镜像启动失败，经引导程序对照和替换后解决；不同批次见镜像说明。**双闪本身不是故障码**，2026-09-28 官方 B1 在正常联网和采集时也使用 `heartbeat` 双闪。
+此前排查指向 Armbian 所用主线 U-Boot / 内存初始化固件与本机的兼容性，换用瑞莎引导后能够启动。
 这个目录把换引导、写 WiFi、开串口、开 USB 控制台全打进镜像里，烧完插上就能 ssh。
 
 **不想自己做卡？** [release 里有做好的镜像](https://github.com/fanhao375/microduck-replica/releases)（不带 WiFi，插 USB 当串口进去连），
@@ -12,6 +12,7 @@
 |---|---|
 | `card.conf` | 改 WiFi 名 / 密码，用户名密码默认 `duck` / `duck1234`；国内要装官方软件时填一个 HTTP 代理。**WiFi 两行留空 = 公开镜像模式**，不写任何网络配置 |
 | `镜像使用说明.md` | 给 release 里那张镜像用的：烧卡、USB 串口登录、连 WiFi、换引导救别的批次的板子 |
+| [摄像头调试记录-20260928.md](摄像头调试记录-20260928.md) | 排线接线参考图、官方 B1 对照结果、IMX219 识别与限量抓帧命令；原 Armbian 正确接线复测待完成 |
 | `1-做卡.ps1` | Windows 右键「使用 PowerShell 运行」，选下载的 `.img.xz`，出一个 `xxx-鸭子卡.img`，Rufus 烧它 |
 | `build-armbian-card.sh` | 实际干活的脚本，Linux / WSL 里 `sudo bash build-armbian-card.sh xxx.img.xz card.conf` |
 

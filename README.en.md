@@ -52,7 +52,7 @@ This repository covers two servo choices. **Mechanics, electronics and software 
 | **Editable CAD** | [CAD repo v1.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v1.1) | [CAD repo v2.0](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v2.0), files carry an `-FT` suffix |
 | **Electronics** | official HAT + [`imu_to_dxl`](hardware/imu_to_dxl/) | same; servo connectors are 2.0 mm (official 2.5), `imu_to_dxl` has J4/J5 at 2.0 |
 | **Software** | official runtime runs as-is | different bus protocol, swap the protocol module — [adaptation architecture](software/飞特适配架构.md) (zh); policy retrained for HD-1910 — [training data checklist](docs/HD-1910训练前数据清单.md) |
-| **Status** | paper analysis + first prints | **full robot assembled** (2026-09-13), **all 15 servos on the bus, stands up and sits down** (2026-09-18); zero pose and stance still being tuned |
+| **Status** | paper analysis + first prints | Assembled and stood up (09-18); **HAT received, camera capture passed on official B1** (09-28). Returning to the project image for retesting; mouth servo temporarily reassigned to ID 21 |
 
 The selection argument is in [Actuator Selection](docs/actuator-selection.en.md). This repo's main line is Feetech; the original track is documented just as fully.
 
@@ -73,6 +73,8 @@ The code below is for **Duck Replica Group 9** (WeChat disables QR joins once a 
 
 ## Latest
 
+**2026-09-28 — HAT and camera bring-up:** The HAT has arrived and been fitted to the board. After the camera ribbon orientation/contact was corrected, the Radxa Camera 8M219 was identified and **40 frames at 1920×1080** were captured on official Bookworm B1. The next step is to return to the project Armbian image and repeat the test with the corrected wiring. Sustained frame rate, all HAT functions and robot walking remain unverified. See the [wiring reference and test record](tools/radxa/摄像头调试记录-20260928.md) (Chinese).
+
 <table>
 <tr>
 <td width="50%" valign="top">
@@ -85,7 +87,7 @@ First time the assembled duck was on the bus: URT-2 over USB, 7.4 V into V1, **a
 Driven from the new [web servo console](tools/servo-web/) in this repo: sliders, saved poses, sequences, a 3D model that follows the real robot and a live centre-of-mass marker against the foot support.
 Above, it stands up from the tucked pose **by itself**, then sits back down. **First step of the Feetech software path works**; the hardware plan holds.
 
-The first `imu_to_dxl` boards arrived: 3.3 V rail fine, J4/J5 connector footprint needs a fix, firmware not written yet — [design notes and reviews](hardware/imu_to_dxl/).
+The above is the 09-18 test. As of 09-28, the failed ID 21 servo has been replaced with the former mouth servo (ID 34); the operator confirmed centre calibration at 2048, and the mouth is temporarily missing. The old “all 15 online” result is not the current configuration. Feetech-protocol [`imu_to_dxl` firmware 0.2.0](hardware/imu_to_dxl/firmware/) is available; physical bus testing is still pending.
 
 **[Web servo console](tools/servo-web/)**　·　
 **[Debug log](调试记录.md)** (zero pose, joint direction, stance pitfalls)　·　
