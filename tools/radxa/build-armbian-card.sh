@@ -2,12 +2,12 @@
 # 给 Radxa Zero 3W（V1.12，AIC8800 WiFi）做一张能直接开机、自动连 WiFi、ssh 能进的 Armbian 卡。
 #   sudo bash build-armbian-card.sh <Armbian_26.2.1_Radxa-zero3_trixie_vendor_6.1.115_minimal.img.xz> [card.conf]
 # 做的事（每一条都是踩过坑的）：
-#   1. 换引导程序：Armbian 自带的主线 U-Boot 在 V1.12 板上内核起不来（灯双闪、永远进不了系统），
+#   1. 换引导程序：此前本机 V1.12 测试中 Armbian 自带的主线 U-Boot 未能完成系统启动，
 #      换成瑞莎 u-boot-rk2410 包里的 idbloader.img + u-boot.itb（扇区 64 / 16384）
 #   2. 瑞莎 U-Boot 走 extlinux：写 /boot/extlinux/extlinux.conf，挂 uart2-m0（舵机串口 /dev/ttyS2）
 #      和 dwc3-peripheral（OTG 口插电脑就是串口）两个 overlay，内核控制台放 tty1，不占舵机串口
-#   3. 首次开机预设：用户名密码、locale、时区；WiFi 用 Armbian 标准 netplan 写法，
-#      官方 migrate-network.sh 能接手
+#   3. 首次开机预设：用户名密码、locale、时区；wpa_supplicant 负责 WiFi 认证，
+#      systemd-networkd 的 wlan0 配置负责 DHCP 获取 IPv4 地址
 #   4. USB 串口控制台：g_serial + serial-getty@ttyGS0，板子插电脑多出一个 COM 口，救命用
 #   5. 把登录控制台从舵机串口上拿掉：mask serial-getty@ttyS2 / ttyFIQ0
 set -euo pipefail
@@ -20,11 +20,11 @@ CONF="${2:-$HERE/card.conf}"
 [ -f "$CONF" ] || { echo "找不到 $CONF"; exit 1; }
 # shellcheck disable=SC1090
 . <(tr -d '\r' < "$CONF")
-# WIFI_SSID 留空 = 公开镜像模式：不写任何网络配置，开机后插 USB 当串口进去自己连
+# WIFI_SSID 留空 = 公开镜像模式：不写 WiFi 认证信息，保留 wlan0 的 DHCP 配置
 PUBLIC=0
 if [ -z "${WIFI_SSID:-}" ]; then
   PUBLIC=1
-  echo "公开镜像模式：不写 WiFi，开机后用 USB 串口（COM 口）进去连网"
+  echo "公开镜像模式：不写 WiFi 认证信息，开机后用 USB 串口（COM 口）进去连网"
 elif [ "${WIFI_SSID}" = "改成你的WiFi名" ]; then
   echo "先把 card.conf 里的 WiFi 名和密码改掉，或者整行留空做公开镜像"; exit 1
 fi
@@ -94,12 +94,25 @@ PRESET_LOCALE='en_US.UTF-8'
 PRESET_TIMEZONE='Asia/Shanghai'
 PRESET
 chmod 600 "$R/root/.not_logged_in_yet"
+# 默认 10-dhcp-all-interfaces.yaml 只匹配有线网卡，不包含 wlan0。
+# 公开版也预置 DHCP，用户随后填写 WiFi 认证信息即可获取地址。
+mkdir -p "$R/etc/systemd/network"
+cat > "$R/etc/systemd/network/25-wlan0.network" <<'NETWORK'
+[Match]
+Name=wlan0
+
+[Network]
+DHCP=ipv4
+NETWORK
+chmod 644 "$R/etc/systemd/network/25-wlan0.network"
 if [ "$PUBLIC" = 1 ]; then
 cat > "$R/root/先连WiFi.txt" <<'NOTE'
-这张卡没写 WiFi（公开镜像）。板子没有网口，登录后自己配，两种办法：
+这张卡没写 WiFi 认证信息（公开镜像）。板子没有网口，登录后自己配：
 
-A) 命令行配（下面这套是在 V1.12 + AIC8800 上实测能连的写法）：
+通过 USB 串口或本地终端配置；更换 WiFi 会断开无线 SSH。country 请按实际所在地填写。
+下面沿用此前 V1.12 + AIC8800 调试的 WPA2 配置，并使用预置的 DHCP；2026-09-28 本机修复镜像已实测联网，其他板卡/网络仍需验证。
 
+   sudo mkdir -p /etc/wpa_supplicant
    sudo tee /etc/wpa_supplicant/wpa_supplicant-wlan0.conf >/dev/null <<'CONF'
    ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev
    update_config=1
@@ -116,14 +129,18 @@ A) 命令行配（下面这套是在 V1.12 + AIC8800 上实测能连的写法）
    }
    CONF
    sudo chmod 600 /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-   sudo systemctl enable --now wpa_supplicant@wlan0
-   ip a show wlan0          # 看有没有拿到 IP（DHCP 由系统自带的 netplan 做）
+   sudo systemctl enable --now systemd-networkd
+   sudo systemctl enable wpa_supplicant@wlan0
+   sudo systemctl restart wpa_supplicant@wlan0
+   sudo networkctl reload
+   sudo networkctl reconfigure wlan0
+   ip -4 a show wlan0       # DHCP 由预置的 25-wlan0.network 提供
 
-   pairwise=CCMP 和 ieee80211w=0 这两行别删：AIC8800 不支持 GCMP-256，
-   路由器开 WPA2/WPA3 混合模式时，不写这两行握手会失败。
+   等待约 30 秒后检查：sudo wpa_cli -i wlan0 status、ip -4 a show wlan0、ip -4 route。
+   应有 wpa_state=COMPLETED、IPv4 地址和默认路由。
+   此配置要求路由器允许 WPA2-PSK / AES，不适用于只允许 WPA3 或强制 PMF 的网络。
 
-B) 图形界面：sudo nmtui，选 Activate a connection 挑 WiFi。
-   （连不上就用 A，多半还是上面那个 WPA3 的问题）
+基础镜像没有安装 NetworkManager/nmtui，按上面的命令配置即可。
 
 烧卡前就想把 WiFi 写进去：用仓库里的 tools/radxa/build-armbian-card.sh，
 card.conf 填上 WiFi 名和密码，自己生成一张带网的卡。
@@ -131,8 +148,8 @@ NOTE
 chmod 644 "$R/root/先连WiFi.txt"
 else
 # WiFi 用 wpa_supplicant（V1.12 + AIC8800 实测能连的那套；netplan 的写法没在这块板上验证过）。
-# pairwise=CCMP + ieee80211w=0 是绕开 AIC8800 不支持 GCMP-256 的关键，路由器开 WPA2/WPA3 混合时缺了就握不上手。
-# DHCP 交给 Armbian 自带的 /etc/netplan/10-dhcp-all-interfaces.yaml。
+# 沿用此前调试的 WPA2-PSK/CCMP 配置；不适用于 WPA3-only 或强制 PMF 的网络。
+# DHCP 由上面写入的 /etc/systemd/network/25-wlan0.network 提供。
 mkdir -p "$R/etc/wpa_supplicant"
 cat > "$R/etc/wpa_supplicant/wpa_supplicant-wlan0.conf" <<CONF
 ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev

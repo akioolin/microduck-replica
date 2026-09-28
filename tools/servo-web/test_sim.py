@@ -161,6 +161,32 @@ class TorqueAndSpeedTests(unittest.TestCase):
         self.assertEqual((self.bus.acc_reg[20], self.bus.speed_reg[20]), (0, 3000))
 
 
+class ConnectReadOnlyTests(unittest.TestCase):
+    def test_connect_preserves_existing_motion_settings_and_only_sends_reads(self):
+        from sim_bus import SimSerial
+
+        for phase, unit, max_speed in [(52, 1.0, 3000), (0, 50.0, 60), (12, 1.0, 0)]:
+            with self.subTest(phase=phase), contextlib.ExitStack() as stack:
+                port = SimSerial([20, 21])
+                for servo in port.servos.values():
+                    servo.r[18], servo.r[40], servo.r[41] = phase, 0, 7
+                    struct.pack_into("<H", servo.r, 42, 2100)
+                    struct.pack_into("<H", servo.r, 46, 100)
+                before = {sid: bytes(servo.r[:56]) for sid, servo in port.servos.items()}
+                bus = server.feetech.FeetechBus(None, ser=port)
+                sent = stack.enter_context(patch.object(port, "write", wraps=port.write))
+                stack.enter_context(patch.object(server.feetech, "FeetechBus", return_value=bus))
+                stack.enter_context(patch.object(server, "log"))
+                stack.enter_context(patch.multiple(server, BUS=None, IDS=[20, 21], PRESENT=[],
+                                                   IMU_SERVICE=None, SPEED_UNIT=1.0,
+                                                   MAX_SPEED_REG=3000, PORT=None, BAUD=1_000_000))
+                self.assertTrue(server.open_bus("test-port")["ok"])
+                self.assertEqual(server.PRESENT, [20, 21])
+                self.assertEqual((server.SPEED_UNIT, server.MAX_SPEED_REG), (unit, max_speed))
+                self.assertTrue(all(call.args[0][4] in (1, 2) for call in sent.call_args_list))
+                self.assertEqual({sid: bytes(servo.r[:56]) for sid, servo in port.servos.items()}, before)
+
+
 class SimCalibrationTests(unittest.TestCase):
     """模拟模式按官方折叠校准：只改虚拟舵机，真的 calib/ 和 poses/ 一个字节都不动。"""
 

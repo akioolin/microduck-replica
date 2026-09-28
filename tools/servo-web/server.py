@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # 调试台版本。改了前端或后端就加一：index.html 里的 PAGE_VERSION 要跟这里一样，
 # 页面连上后会比对，不一样就提示"页面是旧的，Ctrl+F5"。改动记在 README 的「版本」一节。
-VERSION = "0.15.1"
+VERSION = "0.15.2"
 DEFAULT_IDS = "20-24,30-34,10-14"
 JOINT_NAMES = {
     20: "left_hip_yaw", 21: "left_hip_roll", 22: "left_hip_pitch", 23: "left_knee", 24: "left_ankle",
@@ -265,7 +265,7 @@ def release_speed(ids):
 
 
 def read_phase():
-    """开机读一颗的相位 18，定速度单位和"不限速"的写法；顺手把所有舵机的速度上限放开。"""
+    """连接时只读相位 18，确定速度单位；保留舵机现有的速度、加速度和目标。"""
     global SPEED_UNIT, MAX_SPEED_REG
     if is_fake() or not PRESENT:
         return
@@ -274,8 +274,6 @@ def read_phase():
         SPEED_UNIT = 1.0 if ph & 0x04 else 50.0
         MAX_SPEED_REG = 0 if ph & 0x08 else int(3000 / SPEED_UNIT)
         log(f"相位 18 = {ph}（BIT2={'1' if ph & 4 else '0'} → 速度单位 {SPEED_UNIT:g} 步/秒；BIT3={'1 速度0=最快' if ph & 8 else '0 速度0=停'} → 不限速写 {MAX_SPEED_REG}）")
-        release_speed(PRESENT)
-        log("已把全部舵机速度上限放开、加速度设最大")
     except Exception as e:
         log(f"读相位失败，速度单位按 1 步/秒：{type(e).__name__}: {e}", "系统", "warn", exc=True)
 
