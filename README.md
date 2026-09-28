@@ -2,6 +2,8 @@
 
 **简体中文** · [English](README.en.md)
 
+> **模型与打印文件统一入口：[microduck-replica-cad](https://github.com/fanhao375/microduck-replica-cad)。** 飞特 / XL330 请选对应版本；本仓旧打印 STL 已移除，避免误打。
+
 > 对 [Pollen Robotics Microduck](https://pollen-robotics.com/microduck/) 的第三方复刻研究。
 > 从官方公开的 MJCF 仿真模型反推出**装配图、爆炸图和可直接导入 CAD 的装配体**。
 
@@ -32,8 +34,8 @@ MJCF 里包含了完整的运动学树：每个零件挂在谁身上、相对位
 |---|---|---|
 | **舵机** | XL330-M288-T ×15 | HD-1910-C001 ×15 —— 便宜一半、力矩 2.5 倍 |
 | **电压** | 额定 6 V，实跑 6.6–8.2 V，**超压 37%** | 额定 4–8.4 V，在额定内；但满电 8.4 V 顶格 |
-| **打印件** | [`print/`](print/) 上游 STL 直接打 | **8 个配合件要改**（HD-1910 舵盘凸、XL330 凹）—— [拓竹一键打印](https://makerworld.com.cn/zh/models/2963569-microduck#profileId-3478428) / [3mf](https://github.com/fanhao375/microduck-replica-cad/tree/master/打印) |
-| **可编辑图纸** | [图纸仓 v1.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v1.1) | [图纸仓 v2.0](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v2.0)，文件带 `-FT` 后缀 |
+| **打印件** | [CAD 仓库 · XL330 版](https://github.com/fanhao375/microduck-replica-cad#两个版本选一个下) | [CAD 仓库 · 飞特版](https://github.com/fanhao375/microduck-replica-cad#两个版本选一个下)，舵盘配合件不能混用 |
+| **可编辑图纸** | [图纸仓 v1.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v1.1) | [图纸仓 v2.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v2.1)，文件带 `-FT` 后缀 |
 | **电路** | 官方 HAT + [`imu_to_dxl`](hardware/imu_to_dxl/) | 同左；舵机连接器 2.0 mm（官方 2.5），`imu_to_dxl` 板上 J4/J5 是 2.0 |
 | **软件** | 官方运行时直接跑 | 总线协议不同，要换协议模块 —— [适配架构分析](software/飞特适配架构.md)；策略要按 HD-1910 重训 —— [训练前数据清单](docs/HD-1910训练前数据清单.md) |
 | **状态** | 纸上分析 + 首批打印件 | 已装机并站起（09-18）；**HAT 到货、官方 B1 下摄像头出图**（09-28），准备换回项目镜像复测；嘴舵机暂挪作 ID 21 |
@@ -97,10 +99,10 @@ MJCF 里包含了完整的运动学树：每个零件挂在谁身上、相对位
 
 **[构建日志](构建日志.md)**　·
 **[飞特版 SolidWorks 图纸](https://github.com/fanhao375/microduck-replica-cad)**　·
-**[拓竹一键打印](https://makerworld.com.cn/zh/models/2963569-microduck#profileId-3478428)**　·
+**[模型与打印文件](https://github.com/fanhao375/microduck-replica-cad)**　·
 **[BOM 清单 · 带采购链接](https://github.com/fanhao375/microduck-replica-cad#装配-bom)**　·
 [调试记录](调试记录.md)　·
-[打印件清单](print/)
+[打印入口](print/)
 </td>
 </tr>
 <tr>
@@ -232,39 +234,18 @@ MJCF 里包含了完整的运动学树：每个零件挂在谁身上、相对位
 
 > ⚠️ 里面有两条会让人买错的更正：**电池是 NP-F550 不是 F970**、**XL330 被超压运行**。
 
-## 3D 打印件
+## 3D 打印件与 CAD 装配体
 
-整机全部 STL 单件，按「要打印 / 买现成的」分好类，中英双语命名 —— [`print/`](print/)
+**统一到 [fanhao375/microduck-replica-cad](https://github.com/fanhao375/microduck-replica-cad) 下载。** SolidWorks、STEP、打印工程、装配 BOM 和安装说明在同一个仓库维护。
 
-| 目录 | 数量 |
+| 版本 | 截至 2026-09-28 的 CAD 发布 |
 |---|---|
-| 🖨️ [**拓竹 MakerWorld · microduck**](https://makerworld.com.cn/zh/models/2963569-microduck#profileId-3478428) | **不想看图直接打** —— 一键切片，Bambu 打印机直接开 |
-| [`print/打印件/`](print/打印件/) | **30 种 / 41 件**结构件 |
-| [`print/标准件-无需打印/`](print/标准件-无需打印/) | **9 个**外购件模型（对位用） |
+| 飞特 HD-1910 | [v2.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v2.1) |
+| Dynamixel XL330 | [v1.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v1.1) |
 
-> 上游的 XL330 台架测试夹具在另一个目录，本来就不属于机器人。打印建议与数量表见 [`print/README.md`](print/README.md)，采购见 [机械采购清单](docs/机械采购清单.md)。
+本仓旧 `print/` 单件和 `cad/` 装配 STL 来自上游仿真模型，未同步实物改件，现已移除；这两个目录保留下载指引。**不要把飞特和 XL330 配合件混用，也不要把本仓训练/网页网格用于打印。**
 
-## CAD 装配体
-
-`cad/` 下是**已应用世界变换**的 STL —— 直接导入 CAD 就是装好的样子，
-不用自己摆位置（上游那 47 个 STL 都是零件自身坐标系的，直接导入会全部堆在原点）。
-
-- `00_Microduck_整机装配体.stl` —— 整机单文件，796792 三角面
-- `01` ~ `15` —— 按刚体分组的 15 个部件，文件名即部件名
-- `零件对照表.json` —— 每个部件由哪些上游源网格组成
-
-单位 **毫米**。可直接用 FreeCAD / Fusion 360 / SolidWorks / Blender / 各类切片软件打开。
-
-### 📐 要可编辑的参数模型？在另一个仓库
-
-本仓库的 `cad/` 与 `print/` 都是**网格（STL）**—— 能打印、能看、能测量，但**改不动**。
-
-**[fanhao375/microduck-replica-cad](https://github.com/fanhao375/microduck-replica-cad)**
-是配套的三维图纸仓库，放的是**可编辑的 SolidWorks 源文件**（📦 **压缩包在那个仓库的 Releases 页，不在文件列表里**）：
-16 个装配体 + 40 个零件，外加一份 **21 页的装配安装说明书**（含每个组件的步骤、配图与注意事项）。
-
-> 那套图纸由 **[机械行者Robo](https://github.com/fanhao375/microduck-replica-cad#图纸作者机械行者Robo)**
-> 建模并编写说明书 —— 想改尺寸、改壁厚、重新出工程图的，从那边拿源文件。
+CAD 仓库的 09-15 旧 3MF 尚未包含 v2.1 合体轮胎；请核对具体附件版本，详见 [打印说明](print/README.md)。图纸与说明书由 **机械行者Robo** 建模整理，来源与许可见 CAD 仓库。
 
 ---
 
@@ -346,7 +327,7 @@ MJCF 里包含了完整的运动学树：每个零件挂在谁身上、相对位
 
 | | 方案 |
 |---|---|
-| 机械 | 用本仓库的 STL 与装配图，几何完全照抄 |
+| 机械 | 到 [CAD 仓库](https://github.com/fanhao375/microduck-replica-cad) 选择对应舵机版本的模型与装配说明 |
 | 舵机 | XL330 × 15，市售件照买 |
 | 主控 | **Radxa Zero 3W**，市售模块，与官方同款 |
 | IMU 板 | 自己画 `imu_to_dxl`：LSM6DSV16X + MCU + 半双工收发器，协议已还原 |
@@ -407,8 +388,8 @@ bash scripts/fetch_upstream.sh
 # 2. 重新生成装配图
 python scripts/render_assembly.py upstream/microduck_rl assembly-drawings
 
-# 3. 重新导出 CAD 装配体
-python scripts/export_assembly_stl.py upstream/microduck_rl cad
+# 3. 导出上游装配分析预览（不作为实物打印件）
+python scripts/export_assembly_stl.py upstream/microduck_rl analysis-output/cad-upstream
 
 # 4. 重新扫描孔特征
 python scripts/analyze_holes.py upstream/microduck_rl/src/mjlab_microduck/robot/microduck/assets
@@ -421,7 +402,7 @@ python scripts/analyze_holes.py upstream/microduck_rl/src/mjlab_microduck/robot/
 ## 许可证
 
 - `scripts/` —— Apache-2.0
-- `assembly-drawings/` `cad/` —— **CC BY-SA-NC 4.0**（上游 3D 模型为 CC BY-SA-NC，
+- `assembly-drawings/` 及保留的仿真网格 —— **CC BY-SA-NC 4.0**（上游 3D 模型为 CC BY-SA-NC，
   依 ShareAlike 条款衍生作品须沿用同协议，**不得商用**）
 
 详见 [NOTICE.md](NOTICE.md)。本项目与 Pollen Robotics 无隶属关系，未获其背书。

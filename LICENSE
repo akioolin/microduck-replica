@@ -16,11 +16,13 @@
 
      assembly-drawings/    渲染图与爆炸图（由上游 MJCF + STL 生成）
                            renders and exploded views, generated from upstream MJCF + STL
-     cad/                  已应用世界变换的装配体 STL（由上游 STL 合并）
-                           "assembled" STLs with world transforms applied
-     print/                46 个单件 STL —— 上游 STL 的再分发（重命名与分类）
-                           46 individual STLs — redistribution of upstream STLs
-                           (renamed and sorted)
+     software/training/ 内的 3D 网格 / 3D meshes in software/training/
+                           保留的上游仿真几何 / retained upstream simulation geometry
+     tools/servo-web/model/
+                           网页显示模型 / web visualization geometry
+     cad/, print/ 的历史 STL / historical STLs in cad/ and print/
+                           旧模型已于 2026-09-28 移除，Git 历史中的衍生作品许可不变
+                           removed on 2026-09-28; their licence in Git history is unchanged
      docs/hole_analysis.json
                            由上游 STL 计算得出的孔位数据
                            hole geometry computed from upstream STLs

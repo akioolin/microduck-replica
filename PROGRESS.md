@@ -2,8 +2,10 @@
 
 **项目**：Microduck 复刻
 **开始**：2026-08-28
-**最后更新**：2026-09-03（硬件开源状态勘误：HAT 板官方已开源）
+**历史进度基准**：2026-09-03（硬件开源状态勘误：HAT 板官方已开源）
 **仓库**：https://github.com/fanhao375/microduck-replica （公开）
+
+> **模型入口更新（2026-09-28）**：结构件、CAD 与打印工程统一到 [microduck-replica-cad](https://github.com/fanhao375/microduck-replica-cad) 下载。主仓旧 `print/`、`cad/` STL 已移除，目录只保留入口说明。下文分析批次与数量是历史记录；最新实物进度见 [构建日志](构建日志.md)，版本核对见 [CAD 记录](docs/CAD结构件版本核对-20260928.md)。
 
 ---
 
@@ -203,7 +205,7 @@
 |---|---|---|
 | 做 Microduck 还是 Open Duck Mini v2 | **做 Microduck** | 用户明确要 Microduck 本身。Open Duck Mini v2 虽然全套开源（BOM/CAD/STL/装配指南齐全），但那是另一台机器人 |
 | 仓库公开还是私有 | **公开** | 用户选择。CC BY-NC-SA 允许转发，已配好署名、同协议、非商用声明 |
-| 是否把 6 个上游仓库一起打包 | **不打包** | 重新托管别人的代码不合适，且会丢失上游更新。改用 `scripts/fetch_upstream.sh` + 链接<br>（2026-09-04 补充：`print/` 是有意的例外 —— 单件 STL 是复刻者最需要能在网页上逐个查看的东西，CC BY-NC-SA 允许再分发，已在 NOTICE.md 声明） |
+| 是否把 6 个上游仓库一起打包 | **不打包** | 分析脚本使用 `scripts/fetch_upstream.sh` 获取上游。2026-09-04 曾提供 `print/` STL 副本；2026-09-28 为避免误打已移除，模型下载统一指向 CAD 仓库。训练工程的来源与许可证另见 `software/training/UPSTREAM.md`。 |
 | 许可证 | **双协议** | `scripts/` 原创 → Apache-2.0；`assembly-drawings/` `cad/` 是 CC BY-SA-NC 衍生作品 → 依 ShareAlike 沿用同协议 |
 | 遇到 PCB 这堵墙怎么办 | **机械照抄 + 电控自建** | 100% 复刻不可能。用户表示能自己做 PCB，所以这条路可行 |
 
@@ -263,7 +265,7 @@
 | `PROGRESS.md` | 本文档 |
 | `NOTICE.md` | 署名与来源 |
 | `assembly-drawings/` | 7 张装配图 |
-| `cad/` | 16 个 STL（整机 + 15 部件）+ 零件对照表 |
+| `cad/`、`print/` | CAD 仓库下载入口；旧 STL 与对照表已移除，历史分析产出可从 Git 历史追溯 |
 | `docs/紧固件反推.md` | M2 螺丝系统、采购量、轴承规格 |
 | `docs/执行器选型.md` | XL330 参数、BAM M6、5 组标定 PD、回差建模 |
 | `docs/硬件规格速查.md` | 一页纸硬件规格表 |

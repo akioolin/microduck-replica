@@ -1,5 +1,7 @@
 # software · 软件适配
 
+> 本目录保留训练所需的上游仿真模型，**不是最新实物结构件的打印来源**。模型下载统一到 [microduck-replica-cad](https://github.com/fanhao375/microduck-replica-cad)；引入飞特舵机参数不等于已更新 CAD 几何、质量和惯量。
+
 官方运行时 [`pollen-robotics/microduck`](https://github.com/pollen-robotics/microduck) 是照 Dynamixel XL330 写的，本仓库主线用飞特 HD-1910，软件要改。这个目录放**训练工程、分析和方案**；Rust 运行时适配代码仍在下方所列的 fork 分支里。
 
 ## HD1910 仿真训练
