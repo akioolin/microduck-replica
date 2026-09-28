@@ -54,7 +54,7 @@ This repository covers two servo choices. **Mechanics, electronics and software 
 | **Editable CAD** | [CAD repo v1.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v1.1) | [CAD repo v2.1](https://github.com/fanhao375/microduck-replica-cad/releases/tag/v2.1), files carry an `-FT` suffix |
 | **Electronics** | official HAT + [`imu_to_dxl`](hardware/imu_to_dxl/) | same; servo connectors are 2.0 mm (official 2.5), `imu_to_dxl` has J4/J5 at 2.0 |
 | **Software** | official runtime runs as-is | different bus protocol, swap the protocol module — [adaptation architecture](software/飞特适配架构.md) (zh); policy retrained for HD-1910 — [training data checklist](docs/HD-1910训练前数据清单.md) |
-| **Status** | paper analysis + first prints | Assembled and stood up (09-18); **HAT received, camera capture passed on official B1** (09-28). Returning to the project image for retesting; mouth servo temporarily reassigned to ID 21 |
+| **Status** | paper analysis + first prints | Assembled and stood up (09-18); Armbian + HAT read all 14 joints during a 3,000-round pose-holding window at about 46.87 Hz with no missing responses. Mouth ID 29 excluded at the operator's request and unverified. Camera capture verified only on official B1; Armbian retest pending |
 
 The selection argument is in [Actuator Selection](docs/actuator-selection.en.md). This repo's main line is Feetech; the original track is documented just as fully.
 
@@ -75,6 +75,10 @@ The code below is for **Duck Replica Group 9** (WeChat disables QR joins once a 
 
 ## Latest
 
+**2026-09-29 — Image login correction:** The original public image requires **`root / 1234`** for the first login. Complete the Armbian wizard before using `duck / duck1234`; it also changes the root password. Change both default passwords immediately. The old image still needs the `wlan0` DHCP fix. The [guide](tools/radxa/镜像使用说明.md) is corrected, and a separate [DHCP fix candidate image](https://github.com/fanhao375/microduck-replica/releases/tag/radxa-zero3w-armbian-20260929) has passed offline checks; **this new artifact has not been flashed and boot-tested on hardware**. It contains neither the robot runtime nor the web servo console.
+
+**2026-09-28 — HAT feedback test:** Web console **0.15.4** is deployed on the board, with responses matched by their actual servo ID and a 50 Hz sampling target. While holding the existing pose for about 64 seconds, all 14 joints returned **3,000/3,000** valid samples (42,000 total), with no timeout, checksum or ID errors in that window. The observed rate was **46.87 Hz**. Torque remained enabled and goals/settings were unchanged. **The full control loop with IMU, inference and motion writes, and the walking policy, remain unverified.** Occasional missing responses have occurred outside this window. See the [test scope and results](tools/radxa/50Hz保持姿势读状态-20260928.md) (Chinese).
+
 **2026-09-28 — HAT and camera bring-up:** The HAT has arrived and been fitted to the board. After the camera ribbon orientation/contact was corrected, the Radxa Camera 8M219 was identified and **40 frames at 1920×1080** were captured on official Bookworm B1. The next step is to return to the project Armbian image and repeat the test with the corrected wiring. Sustained frame rate, all HAT functions and robot walking remain unverified. See the [wiring reference and test record](tools/radxa/摄像头调试记录-20260928.md) (Chinese).
 
 <table>
@@ -89,7 +93,7 @@ First time the assembled duck was on the bus: URT-2 over USB, 7.4 V into V1, **a
 Driven from the new [web servo console](tools/servo-web/) in this repo: sliders, saved poses, sequences, a 3D model that follows the real robot and a live centre-of-mass marker against the foot support.
 Above, it stands up from the tucked pose **by itself**, then sits back down. **First step of the Feetech software path works**; the hardware plan holds.
 
-The above is the 09-18 test. As of 09-28, the failed ID 21 servo has been replaced with the former mouth servo (ID 34); the operator confirmed centre calibration at 2048, and the mouth is temporarily missing. The old “all 15 online” result is not the current configuration. Feetech-protocol [`imu_to_dxl` firmware 0.2.0](hardware/imu_to_dxl/firmware/) is available; physical bus testing is still pending.
+The above is the 09-18 test. Earlier on 09-28, the failed ID 21 servo was replaced with the former mouth servo (ID 34), with centre calibration confirmed at 2048. The operator later assigned the mouth ID 29, whose firmware/model fields were detected during a scan. This test covers 14 joints; mouth ID 29 is excluded at the operator's request and remains unverified. The old “all 15 online” result is not the current acceptance result. Feetech-protocol [`imu_to_dxl` firmware 0.2.0](hardware/imu_to_dxl/firmware/) is available; physical bus testing is still pending.
 
 **[Web servo console](tools/servo-web/)**　·　
 **[Debug log](调试记录.md)** (zero pose, joint direction, stance pitfalls)　·　

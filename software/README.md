@@ -17,7 +17,7 @@ HD1910 任务配置、飞特控制器初始化适配、依赖锁文件和测试�
 
 STM32G031 + LSM6DSV16X 固件与硬件资料放在 [`hardware/imu_to_dxl/firmware/`](../hardware/imu_to_dxl/firmware/)。姿态显示并入 [`tools/servo-web/`](../tools/servo-web/)：使用 `python server.py --port COM5 --imu-jlink imu-jlink.json`，同一个模型同时接收舵机关节角和 J-Link 的躯干姿态；只有裸板时可用 `--fake` 代替串口参数。
 
-**范围：SWD 台架观察。** 附带固件仍是 Dynamixel Protocol 2.0 基线，尚未实现飞特地址 56、15 字节契约，不能据此宣布飞特 IMU 总线或整机验收通过。
+**范围：固件与模拟验证、SWD 台架观察。** 附带 0.2.0 源码已实现飞特 SCS/STS 协议、ID 200、地址 56 的 15 字节块及同步读排队；主机测试与模拟总线验收记录见 [`VALIDATION.md`](../hardware/imu_to_dxl/firmware/VALIDATION.md)。实板已有烧录及 IMU 观察记录，但真实混合总线、响应/释放时序和整机运行时验收仍未完成。此前“仍是 Dynamixel 基线、尚未实现契约”的说明已过时，不能与“真总线尚未验收”混为一谈。
 
 ## Rust 运行时代码在哪
 
