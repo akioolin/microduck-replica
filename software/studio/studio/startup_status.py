@@ -17,6 +17,15 @@ def _age(value):
     return value if _number(value) and value >= 0 else None
 
 
+def imu_context_current(rd, now=None):
+    """Only the current daemon's successful, recent bus reply can bind metadata."""
+    age = _age(rd.bus.age(now))
+    hello_at = getattr(getattr(rd, "hello", None), "at", None)
+    return (getattr(rd, "present", None) is True and getattr(rd.bus, "error", None) is None
+            and age is not None and age * 1000 < OBSERVATION_MAX_AGE_MS
+            and (hello_at is None or (rd.bus.at is not None and rd.bus.at >= hello_at)))
+
+
 def imu_diagnostic(rd, now=None):
     """Read-only ID 200 evidence, never an input to control or calibration.
 

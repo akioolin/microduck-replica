@@ -171,6 +171,26 @@ class ImuDiagnosticTest(unittest.TestCase):
         self.assertFalse(bus["native"]["imu_mount_verified"])
         self.assertIsNone(self.backend.last_result)
 
+    def test_new_daemon_or_failed_bus_cannot_project_old_control_metadata(self):
+        bus = self.rd.bus.value
+        bus["phase"] = "control"
+        bus["native"].update(imu_bus=copy.deepcopy(self.obs()["info"]), imu_ready=True)
+        self.rd.calib.set({"imu_source": "bus", "imu_mount": {"quat": [1, 0, 0, 0], "verified": True}})
+        self.rd.calib.at = 100.
+        self.assertEqual(self.view()["imu_bus"]["board"], "imu_to_dxl")
+        self.backend.last_result = {"ok": True}
+        for error, hello_at, now in (("poll transport failed", None, 100.2),
+                                      (None, 100.1, 100.2), (None, None, 103.)):
+            self.rd.bus.error, self.rd.hello.at = error, hello_at
+            with self.subTest(error=error, hello_at=hello_at, now=now):
+                view = self.view(now)
+                self.assertIsNone(view["imu_bus"])
+                self.assertIsNone(view["source"])
+                self.assertIsNone(view["mount"])
+                self.assertIsNone(self.backend.last_result)
+                self.assertIs(bus["native"]["imu_ready"], True, "raw native control cache is preserved")
+                self.assertFalse(self.summary(now)["imu"].get("context_current", True))
+
 
 class ImuDiagnosticTransportTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

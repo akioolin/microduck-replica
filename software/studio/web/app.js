@@ -1047,7 +1047,7 @@ function Main({ duck }) {
       }
       else if (m.t === 'state') {
         const context = JSON.stringify([m.mode, m.build, m.imu?.source, m.imu?.configured_imu_profile,
-          m.posture === 'starting']);
+          m.posture === 'starting', m.imu?.context_current, m.imu?.generation]);
         if (imuContext.current !== null && imuContext.current !== context) { setImu(null); setImuAt(0); }
         imuContext.current = context;
         // 上手清单没变时后端不每帧带（onboarding_same，代码审查 C5）：沿用上一份

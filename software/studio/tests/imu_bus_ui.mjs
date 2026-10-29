@@ -259,6 +259,12 @@ try {
   await wait(`document.querySelector('#main-imu').textContent==='ft6'`, 'Main ordinary control board');
   await js(`mainListener({...mainState,imu:{...mainState.imu,diagnostic:{status:'unknown'}}})`);
   await wait(`document.querySelector('#main-imu').textContent==='unknown'`, 'Main same-build restart clears control board');
+  await js(`window.controlState={...mainState,posture:'holding',imu:{...mainState.imu,context_current:true,
+      generation:100,diagnostic:{status:'unknown'}}};mainListener(controlState);
+    mainListener({t:'imu',source:'bus',configured_imu_profile:'legacy',imu_bus:{board:'ft6'},diagnostic:{status:'unknown'}})`);
+  await wait(`document.querySelector('#main-imu').textContent==='ft6'`, 'Main prior daemon control identity');
+  await js(`mainListener({...controlState,imu:{...controlState.imu,context_current:false,generation:100.1}})`);
+  await wait(`document.querySelector('#main-imu').textContent==='unknown'`, 'Main new hello clears same-phase prior daemon identity');
   assert.deepEqual(errors, []);
   process.stdout.write('IMU bus browser assertions passed\n');
 } finally {

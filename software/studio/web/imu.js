@@ -560,15 +560,16 @@ function StatusCard({ st, imu, live, age, diagnosticElapsed }) {
 }
 
 function DiagnosticCard({ st, imu, live, diagnosticElapsed }) {
-  if (imu?.source !== 'bus' || (st?.posture !== 'starting' && !imu?.diagnostic?.age_ms
-      && imu?.diagnostic?.responding == null)) return null;
-  const d = imuDiagnosticCopy(imu?.diagnostic, live, diagnosticElapsed);
+  const diagnostic = imu?.diagnostic || st?.imu?.diagnostic;
+  if ((imu?.source ?? st?.imu?.source) !== 'bus' || (st?.posture !== 'starting' && !diagnostic?.age_ms
+      && diagnostic?.responding == null)) return null;
+  const d = imuDiagnosticCopy(diagnostic, live, diagnosticElapsed);
   return html`<section class="board imu-card imu-diagnostic" aria-label="总线 IMU 只读诊断">
     <h3>总线 IMU 只读诊断</h3>
     <p class=${'imu-word ' + d.kind}>${d.word}</p>
     ${d.board ? html`<p>${d.board}</p>` : null}
     <p class="sv-small">${d.hint}</p>
-    ${live !== false && imu?.diagnostic?.error ? html`<p class="sv-small">原文：${imu.diagnostic.error}</p>` : null}
+    ${live !== false && diagnostic?.error ? html`<p class="sv-small">原文：${diagnostic.error}</p>` : null}
     <p class="sv-small">板卡应答独立于舵机；不代表已确认安装方向、可采集标定或可运动。姿态和标定仍使用主程序的控制读数。</p>
   </section>`;
 }

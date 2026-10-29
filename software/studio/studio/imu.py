@@ -18,7 +18,7 @@ import time
 from . import helper, imu_calib
 from .robotd import fresh_calib
 from .rpc import RpcError, Timeout, Unreachable, call_once
-from .startup_status import imu_diagnostic
+from .startup_status import imu_context_current, imu_diagnostic
 from .estop import STARTING_PHASES
 
 MAX_SAMPLES = 6000          # 一次 solve 最多收这么多读数（5 步 × 每步 ≤ 600 还有富余），防页面发个巨包
@@ -166,9 +166,12 @@ class ImuBackend:
 
     def view(self):
         bus = self.rd.bus.value if isinstance(self.rd.bus.value, dict) else {}
+        current = not hasattr(self.rd, "present") or imu_context_current(self.rd)
+        if not current:
+            bus = {}  # Preserve the raw cache; expired metadata cannot bind a board or mounting.
         native = bus.get("native") if isinstance(bus.get("native"), dict) else {}
         # 标定状态只认这次 hello 之后读到的（总览重排审查 O5：robotd 重启后旧的「已确认」不能当真）
-        calib = fresh_calib(self.rd)
+        calib = fresh_calib(self.rd) if current else None
         source, mount = mount_of(bus, calib)
         redo = self._redo_view(bus, source)
         context = calibration_context(bus, source, redo)

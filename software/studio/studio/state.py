@@ -21,7 +21,7 @@ import time
 
 from .estop import STARTING_LONG_S, STARTING_PHASES
 from .startup import startup_todo
-from .startup_status import imu_diagnostic, servo_observations, startup_wait
+from .startup_status import imu_context_current, imu_diagnostic, servo_observations, startup_wait
 
 JOINT_NAMES = ["left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle",
                "neck_pitch", "head_pitch", "head_yaw", "head_roll", "mouth",
@@ -283,6 +283,8 @@ def summarize(rd, duck, servo=None, now=None, ob=None, bat=None, net=None, commi
         "servos": servos,
         "imu": {"status": imu_status, "source": native.get("imu_source"),
                 "configured_imu_profile": native.get("configured_imu_profile", (bus or {}).get("configured_imu_profile")),
+                "context_current": imu_context_current(rd, now),
+                "generation": getattr(getattr(rd, "hello", None), "at", None),
                 "diagnostic": imu_diagnostic(rd, now)},
         "pad": pad,
         "cpu": cpu,
