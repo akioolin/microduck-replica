@@ -40,16 +40,38 @@ The existing image remains available; updating an existing card needs no reflash
   native test claim. The optional Python 3.12 Windows backend diagnostic exceeded
   its 100-second bound and is not counted as passing.
 
-## Packaging and publication evidence
+## Final packaging and publication evidence
 
-The official full Studio run, frozen source/package hashes, verified resource
-inventory, signed package/legacy ARM engine checks, draft attachment hashes and
-anonymous old-client discovery/download are recorded during publication under
-`artifacts/software-release-20261029/`. A final evidence update will record their
-actual outcomes and the published source revision. No private signing key, API
-key, pairing state or personal calibration belongs in these release attachments.
+- Frozen software source: `5b2c09cc95e93edcd8ae4be2d82b096d920ff2f1`.
+- Official final Studio run: **1367 tests, 81 environment skips,
+  success**, Python 3.13 isolated runner, `STUDIO_E2E=0`, 332.348 seconds.
+  This run started after the final reviewed archive durability fix was committed.
+- Root Linux updater suite: **21/21, no skips**, system Python 3.11. An earlier
+  attempt using a private `/root` Python installation could not launch the test's
+  demoted user; rerunning with the system interpreter passed without code changes.
+- Signed outer package: `8079360` bytes, SHA256
+  `2f002624cec39683434596145a985bf1ca1b42f2ea607f845b981cc3de428b26`.
+- Frozen software archive SHA256: `7a9d78b58157edf021e252eec924eb3679379c71cee839f60221199b1655abc6`.
+- Existing release public key retained; both signatures and the staged native
+  identity were checked by the frozen old client and actual old ARM updater.
+- All eleven local attachment hashes match GitHub's server size/digest records.
+  The bootstrap's 319 file records were independently checked,
+  including its exact signed package; only regular files/directories are present.
+- Actual old ARM engine/QEMU checks passed: dry run, modified hash/signature
+  refusal, apply, rollback, failed-health automatic rollback, killed-process
+  durable recovery, managed native module trust and stage-one native isolation.
 
-The feature has local board evidence, with all 15 servos visible while the chosen
-I2C IMU has no sample, control ticks remain zero and torque is off. The formal
-automatic installer is exercised separately in temporary roots/QEMU; no automated
-physical install or walking acceptance is implied.
+The frozen 20261027 client anonymously selected 2026.10.29 from the public
+catalog, downloaded the package, and verified both signatures with its
+original public key.
+
+Published: [microduck-software-v2026.10.29](https://github.com/fanhao375/microduck-replica/releases/tag/microduck-software-v2026.10.29). The
+`microduck-replica-image-20261027` release remains GitHub Latest. Existing cards
+receive this software version through the software catalog or the offline bundle.
+The two-stage native update and hardware acceptance limits above still apply.
+
+Local evidence: `artifacts/software-release-20261029/` contains
+`frozen-build.json`, `studio-full.log/json`, `runtime-provenance.json`,
+`legacy-engine-final.json`, `local-assets-verification.json`,
+`publication-assets.json` and draft/public verification reports. The public release
+includes `runtime-provenance.json`, source links, all signatures and SHA256 files.
