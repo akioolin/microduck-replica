@@ -16,14 +16,19 @@ import uuid
 
 SCHEMA = 'microduck-native-update/1'
 PAYLOAD_SCHEMA = 'microduck-native-payload/1'
-REVIEWED_SHA256 = '3dbbf1723c0315afc15fd9f28787c0cfc194622a67802adcd1f5aa397ea47422'
-REVIEWED_SIZE = 5588320
+REVIEWED_SHA256 = '725b74cd93660a312970a44879abe5b75e8becf108499a1b8798961e48ca5f00'
+REVIEWED_SIZE = 5606976
 LEGACY_OLD_SHA256 = 'edf182edb7bf11aeeeedfdab98170ab2ec48a9ec18417f9b68c744b0a60c6d16'
 LEGACY_TARGET_SHA256 = 'febf44e2e5d4e573f4513f25a1ae6480b976c3988dd3d5e7cdfcf84d2a2d5063'
-SUPPORTED_SHA256 = (LEGACY_OLD_SHA256, LEGACY_TARGET_SHA256)
-SOURCE = '0583a2a27e1f4cc719e1ac9dafbc1f0876616848'
-BUILD = '0791fcd-feetech-qinmo-control.46'
-IPC_API = 41
+LEGACY_STARTUP_SHA256 = '3dbbf1723c0315afc15fd9f28787c0cfc194622a67802adcd1f5aa397ea47422'
+SUPPORTED_SHA256 = (LEGACY_OLD_SHA256, LEGACY_TARGET_SHA256, LEGACY_STARTUP_SHA256)
+PREDECESSOR_IPC_API = {LEGACY_OLD_SHA256: 40, LEGACY_TARGET_SHA256: 40, LEGACY_STARTUP_SHA256: 41}
+LEGACY_TRANSACTIONS = {(LEGACY_OLD_SHA256, LEGACY_TARGET_SHA256): '.45',
+                       (LEGACY_OLD_SHA256, LEGACY_STARTUP_SHA256): '.46',
+                       (LEGACY_TARGET_SHA256, LEGACY_STARTUP_SHA256): '.46'}
+SOURCE = '931ce978f2efb27c157b7a583ee402793131a0d2'
+BUILD = '0791fcd-feetech-qinmo-control.47'
+IPC_API = 42
 TARGET = '/opt/robot/feetech-ft5-r5/robotd'
 CONFIG = '/etc/robot/feetech-ft5/robotd.toml'
 CALIB = '/etc/robot/feetech-ft5/hd1910-calibration.toml'
@@ -144,7 +149,7 @@ class Transaction:
                     or (os.name=='posix' and m.get('binary_mode') not in (0o755,0o555))
                     or not re.fullmatch('[0-9a-f]{32}', m.get('transaction_id', ''))
                     or m.get('old_sha256') not in (*SUPPORTED_SHA256, REVIEWED_SHA256)
-                    or m.get('target_sha256') not in (REVIEWED_SHA256, LEGACY_TARGET_SHA256)
+                    or m.get('target_sha256') not in (REVIEWED_SHA256, LEGACY_TARGET_SHA256, LEGACY_STARTUP_SHA256)
                     or m.get('mode') not in ('motion', 'startup', 'commissioning')
                     or set(m.get('controllers', {})) != set(CONTROLLERS)
                     or any(type(v) is not bool for v in m['controllers'].values())
@@ -153,7 +158,7 @@ class Transaction:
                         or any(m['controllers'][u]!=(state=='active') for u,state in m['controller_states'].items())))
                     or [row.get('path') for row in m.get('files', [])] != list(USER_FILES)):
                 raise ValueError('journal schema mismatch')
-            if m['target_sha256'] == LEGACY_TARGET_SHA256:
+            if m['target_sha256'] != REVIEWED_SHA256:
                 self.legacy_terminal(m)
             if m['active'] or m.get('restore_pending') or m.get('cleanup_pending') or self.has_exclusion():
                 directory = STATE + '/' + m['transaction_id']
@@ -169,15 +174,16 @@ class Transaction:
             self.refuse('主程序更新记录读不回：保留现场并恢复', 'native_tampered')
 
     def legacy_terminal(self, m):
-        # Only the known .44 -> .45 transaction can precede this release. Its
-        # in-flight recovery belongs to the previous signed updater and payload.
-        if m['old_sha256'] != LEGACY_OLD_SHA256:
+        # Only actual known predecessor transactions may become history. Their
+        # in-flight recovery belongs to the original signed updater and payload.
+        build = LEGACY_TRANSACTIONS.get((m['old_sha256'], m['target_sha256']))
+        if build is None:
             raise ValueError('unknown predecessor transaction')
         if (m['active'] or m.get('restore_pending') is not False or m.get('cleanup_pending') is not False
                 or m['phase'] not in ('completed', 'rolled_back') or self.has_exclusion()):
-            self.refuse('上一版 .45 主程序更新尚未完成：请使用上一版已签名软件包的更新器恢复后再更新',
+            self.refuse('上一版 '+build+' 主程序更新尚未完成：请使用该版已签名软件包的更新器恢复后再更新',
                         'native_recovery_required')
-        installed = LEGACY_TARGET_SHA256 if m['phase'] == 'completed' else LEGACY_OLD_SHA256
+        installed = m['target_sha256'] if m['phase'] == 'completed' else m['old_sha256']
         if (m.get('completion') != m['phase'] or m.get('installed_sha256') != installed
                 or m.get('commit_sha256') != installed or m.get('running_verified') is not True
                 or sha(self.read(TARGET)) != installed):
@@ -414,9 +420,9 @@ class Transaction:
                 self.assert_controllers_stopped()
                 identity = self.process(expected, ARGS+(['--commissioning'] if mode=='commissioning' else []))
                 hello = self.ctx.rpc('hello')
-                # Both supported predecessor binaries use IPC 40; rollback must
-                # verify their original contract rather than the new target's.
-                expected_ipc = IPC_API if expected==REVIEWED_SHA256 else 40
+                # Rollback verifies each reviewed binary's original contract.
+                expected_ipc = IPC_API if expected==REVIEWED_SHA256 else PREDECESSOR_IPC_API.get(expected)
+                if expected_ipc is None: self.refuse('主程序摘要没有已审核的 IPC 版本')
                 if hello.get('api_version')!=expected_ipc: self.refuse('主程序 IPC 版本不匹配')
                 if expected==REVIEWED_SHA256:
                     rc,out,_ = self.ctx.run([TARGET,'deployment-info'])
@@ -632,7 +638,7 @@ class Transaction:
                 raw = self.read(path) if present else None
                 if present: self.write(directory+'/user-'+str(i),raw,0o600)
                 rows.append({'path':path,'existed':present,'sha256':sha(raw) if present else None})
-            if m and m['target_sha256'] == LEGACY_TARGET_SHA256:
+            if m and m['target_sha256'] != REVIEWED_SHA256:
                 self.archive_legacy(m)
             m = {'schema':SCHEMA,'active':True,'transaction_id':ident,'mode':mode,
                  'available':True,'old_sha256':old_hash,'target_sha256':REVIEWED_SHA256,'installed_sha256':old_hash,

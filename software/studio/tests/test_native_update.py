@@ -26,11 +26,13 @@ def elf(tail):
     return b'\x7fELF\x02\x01\x01' + bytes(9) + b'\x02\x00\xb7\x00' + bytes(44) + tail
 
 
-OLD, PREVIOUS, NEW = elf(b'old'), elf(b'previous-reviewed'), elf(b'new')
+OLD, PREVIOUS, STARTUP, NEW = (elf(b'old'), elf(b'previous-reviewed'),
+                              elf(b'startup-status-reviewed'), elf(b'new'))
 SHA = lambda data: hashlib.sha256(data).hexdigest()
-APPROVED_SHA256 = '3dbbf1723c0315afc15fd9f28787c0cfc194622a67802adcd1f5aa397ea47422'
+APPROVED_SHA256 = '725b74cd93660a312970a44879abe5b75e8becf108499a1b8798961e48ca5f00'
 PREDECESSOR_SHA256 = ('edf182edb7bf11aeeeedfdab98170ab2ec48a9ec18417f9b68c744b0a60c6d16',
-                      'febf44e2e5d4e573f4513f25a1ae6480b976c3988dd3d5e7cdfcf84d2a2d5063')
+                      'febf44e2e5d4e573f4513f25a1ae6480b976c3988dd3d5e7cdfcf84d2a2d5063',
+                      '3dbbf1723c0315afc15fd9f28787c0cfc194622a67802adcd1f5aa397ea47422')
 TARGET = '/opt/robot/feetech-ft5-r5/robotd'
 ARGS = [TARGET, '--socket', '/run/robotd.sock', '--params', H.IMU_CONFIG, '--port', '/dev/ttyS2']
 STATE = '/var/lib/microduck-helper/native-update'
@@ -40,7 +42,7 @@ FILES = (H.IMU_CONFIG, H.IMU_CONFIG_SAVED, H.CALIB, H.CALIB_SAVED)
 
 class NativeReleaseTest(unittest.TestCase):
     def artifact(self):
-        relative = 'chengshenzhilu/Robot/Microduck/artifacts/imu-only-20261029/robotd-startup-status-arm64'
+        relative = 'chengshenzhilu/Robot/Microduck/artifacts/imu-independent-20261030/robotd-independent-imu-arm64'
         for root in ('F:/', '/mnt/f/'):
             path = Path(root + relative)
             if path.exists(): return path.read_bytes()
@@ -48,43 +50,65 @@ class NativeReleaseTest(unittest.TestCase):
 
     def test_reviewed_identity_and_supported_predecessors_are_exact(self):
         self.assertEqual(N.REVIEWED_SHA256, APPROVED_SHA256)
-        self.assertEqual(N.REVIEWED_SIZE, 5588320)
-        self.assertEqual(N.SOURCE, '0583a2a27e1f4cc719e1ac9dafbc1f0876616848')
-        self.assertEqual(N.BUILD, '0791fcd-feetech-qinmo-control.46')
+        self.assertEqual(N.REVIEWED_SIZE, 5606976)
+        self.assertEqual(N.SOURCE, '931ce978f2efb27c157b7a583ee402793131a0d2')
+        self.assertEqual(N.BUILD, '0791fcd-feetech-qinmo-control.47')
+        self.assertEqual(N.IPC_API, 42)
         self.assertEqual(N.SUPPORTED_SHA256, PREDECESSOR_SHA256)
-        self.assertEqual((N.LEGACY_OLD_SHA256, N.LEGACY_TARGET_SHA256), PREDECESSOR_SHA256)
+        self.assertEqual((N.LEGACY_OLD_SHA256, N.LEGACY_TARGET_SHA256), PREDECESSOR_SHA256[:2])
         self.assertNotIn(N.REVIEWED_SHA256, N.SUPPORTED_SHA256)
+
+    def test_known_predecessor_contracts_and_journal_pairs_are_exact(self):
+        baseline, previous = PREDECESSOR_SHA256[:2]
+        startup = '3dbbf1723c0315afc15fd9f28787c0cfc194622a67802adcd1f5aa397ea47422'
+        self.assertEqual(N.LEGACY_STARTUP_SHA256, startup)
+        self.assertEqual(N.PREDECESSOR_IPC_API, {baseline: 40, previous: 40, startup: 41})
+        self.assertEqual(N.LEGACY_TRANSACTIONS, {(baseline, previous): '.45',
+                                               (baseline, startup): '.46', (previous, startup): '.46'})
 
     def test_actual_approved_artifact_matches_exact_manifest(self):
         data = self.artifact()
         self.assertTrue(N.is_aarch64(data))
-        self.assertEqual(len(data), 5588320)
+        self.assertEqual(len(data), 5606976)
         self.assertEqual(SHA(data), APPROVED_SHA256)
-        self.assertEqual(N.native_manifest('2026.10.29', data), {
+        self.assertEqual(N.native_manifest('2026.10.30', data), {
             'schema': 'microduck-native-payload/1', 'architecture': 'aarch64',
-            'software_version': '2026.10.29',
-            'source_revision': '0583a2a27e1f4cc719e1ac9dafbc1f0876616848',
-            'build': '0791fcd-feetech-qinmo-control.46', 'official_version': '0.15.1',
-            'model_api': 2, 'ipc_api': 41, 'size': 5588320, 'sha256': APPROVED_SHA256,
+            'software_version': '2026.10.30',
+            'source_revision': '931ce978f2efb27c157b7a583ee402793131a0d2',
+            'build': '0791fcd-feetech-qinmo-control.47', 'official_version': '0.15.1',
+            'model_api': 2, 'ipc_api': 42, 'size': 5606976, 'sha256': APPROVED_SHA256,
             'supported_installed_sha256': list(PREDECESSOR_SHA256)})
 
     def test_actual_approved_payload_is_accepted(self):
         data = self.artifact()
         try:
-            N.validate_payload(data, N.native_manifest('2026.10.29', data), '2026.10.29')
+            N.validate_payload(data, N.native_manifest('2026.10.30', data), '2026.10.30')
         except ValueError as error:
             self.fail(str(error))
 
     def test_actual_payload_refuses_altered_manifest_or_bytes(self):
         data = self.artifact()
-        manifest = N.native_manifest('2026.10.29', data)
-        for field, value in (('schema', 'foreign'), ('ipc_api', 40), ('model_api', 3),
+        manifest = N.native_manifest('2026.10.30', data)
+        for field, value in (('schema', 'foreign'), ('ipc_api', 40), ('ipc_api', 41), ('model_api', 3),
                              ('source_revision', 'a' * 40), ('build', 'foreign'),
                              ('supported_installed_sha256', []), ('unexpected', True)):
             with self.subTest(field=field), self.assertRaises(ValueError):
-                N.validate_payload(data, {**manifest, field: value}, '2026.10.29')
+                N.validate_payload(data, {**manifest, field: value}, '2026.10.30')
         with self.assertRaises(ValueError):
-            N.validate_payload(data[:-1] + bytes([data[-1] ^ 1]), manifest, '2026.10.29')
+            N.validate_payload(data[:-1] + bytes([data[-1] ^ 1]), manifest, '2026.10.30')
+
+    def test_actual_predecessor46_cannot_be_reused_as_current_payload(self):
+        relative = 'chengshenzhilu/Robot/Microduck/artifacts/imu-only-20261029/robotd-startup-status-arm64'
+        for root in ('F:/', '/mnt/f/'):
+            path = Path(root + relative)
+            if path.exists():
+                data = path.read_bytes()
+                break
+        else:
+            self.skipTest('reviewed predecessor release input not present')
+        self.assertEqual(SHA(data), PREDECESSOR_SHA256[2])
+        with self.assertRaises(ValueError):
+            N.validate_payload(data, N.native_manifest('2026.10.30', data), '2026.10.30')
 
 
 class NativeWorld(RedoWorld):
@@ -95,7 +119,7 @@ class NativeWorld(RedoWorld):
         self.fail = None
         self.hook = None
         self.absent_units=set()
-        self.hello_apis = {OLD: 40, PREVIOUS: 40, NEW: 41}
+        self.hello_apis = {OLD: 40, PREVIOUS: 40, STARTUP: 41, NEW: 42}
         self.hello_seen = []
         self.units['duck-echo'] = 'active'
         self.exec_override = ' '.join(ARGS)
@@ -164,7 +188,8 @@ class NativeWorld(RedoWorld):
             self.publish_process()
             return 0, '', ''
         if argv == [TARGET, 'deployment-info']:
-            return 0, json.dumps({'build': '0791fcd-feetech-qinmo-control.46', 'model_api': 2, 'official_version': '0.15.1'}), ''
+            build = {OLD: '.44', PREVIOUS: '.45', STARTUP: '.46', NEW: '.47'}[self.path(TARGET).read_bytes()]
+            return 0, json.dumps({'build': '0791fcd-feetech-qinmo-control' + build, 'model_api': 2, 'official_version': '0.15.1'}), ''
         return super().run(argv)
 
 
@@ -203,7 +228,13 @@ class NativeTest(unittest.TestCase):
         self.ctx = NativeCtx(self.w, b'{}')
         self.op = H.Op(self.ctx, 'robotd-update')
         self.pins = mock.patch.multiple(N, REVIEWED_SHA256=SHA(NEW), REVIEWED_SIZE=len(NEW),
-                                        SUPPORTED_SHA256=(SHA(OLD), SHA(PREVIOUS)))
+            BUILD='0791fcd-feetech-qinmo-control.47', IPC_API=42,
+            SUPPORTED_SHA256=(SHA(OLD), SHA(PREVIOUS), SHA(STARTUP)),
+            LEGACY_OLD_SHA256=SHA(OLD), LEGACY_TARGET_SHA256=SHA(PREVIOUS), LEGACY_STARTUP_SHA256=SHA(STARTUP),
+            PREDECESSOR_IPC_API={SHA(OLD): 40, SHA(PREVIOUS): 40, SHA(STARTUP): 41},
+            LEGACY_TRANSACTIONS={(SHA(OLD), SHA(PREVIOUS)): '.45',
+                                 (SHA(OLD), SHA(STARTUP)): '.46',
+                                 (SHA(PREVIOUS), SHA(STARTUP)): '.46'})
         self.pins.start(); self.addCleanup(self.pins.stop)
         self.manifest = N.native_manifest('2026.10.28', NEW)
         self.w.path(self.release + '/studio/deploy/native/manifest.json').write_text(json.dumps(self.manifest), encoding='utf-8')
@@ -246,7 +277,7 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(self.w.live_mode, 'motion')
         self.assertTrue(all(self.w.path(p).read_bytes()==v for p,v in self.saved.items()))
         self.assertEqual(self.w.units['padd'], 'active')
-        self.assertEqual(self.w.hello_seen, [(NEW, 'commissioning', 41), (NEW, 'motion', 41)])
+        self.assertEqual(self.w.hello_seen, [(NEW, 'commissioning', 42), (NEW, 'motion', 42)])
 
     def test_previous_reviewed_binary_can_upgrade_to_current(self):
         self.w.path(TARGET).write_bytes(PREVIOUS)
@@ -281,6 +312,34 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(self.journal()['phase'], 'rolled_back')
         self.assertEqual(self.w.hello_seen[-2:], [(PREVIOUS, 'commissioning', 40), (PREVIOUS, 'motion', 40)])
 
+    def test_startup46_binary_can_upgrade_to_current_api42(self):
+        self.w.path(TARGET).write_bytes(STARTUP)
+        self.w.publish_process()
+        self.assertEqual(self.update(), 0)
+        self.assertEqual(self.journal()['old_sha256'], SHA(STARTUP))
+        self.assertEqual(self.w.hello_seen, [(NEW, 'commissioning', 42), (NEW, 'motion', 42)])
+
+    def test_startup46_rollback_requires_original_api41_readiness(self):
+        self.w.path(TARGET).write_bytes(STARTUP)
+        self.w.publish_process()
+        self.w.hello_apis[NEW] = 41
+        self.assertEqual(self.update(), 5)
+        self.assertEqual(self.journal()['phase'], 'rolled_back')
+        self.assertFalse(self.journal()['active'])
+        self.assertEqual(self.w.path(TARGET).read_bytes(), STARTUP)
+        self.assertEqual(self.w.hello_seen[-2:], [(STARTUP, 'commissioning', 41), (STARTUP, 'motion', 41)])
+
+    def test_startup46_rollback_wrong_api40_retains_guard_and_recovery(self):
+        self.w.path(TARGET).write_bytes(STARTUP)
+        self.w.publish_process()
+        self.w.hello_apis.update({NEW: 41, STARTUP: 40})
+        self.assertEqual(self.update(), 5)
+        self.assertEqual(self.journal()['phase'], 'recovery_required')
+        self.assertTrue(self.journal()['active'])
+        self.assertFalse(self.journal()['running_verified'])
+        self.assertEqual(self.w.path(TARGET).read_bytes(), STARTUP)
+        self.assertTrue(self.w.path(GUARD).exists())
+
     def test_rollback_wrong_ipc_retains_guard_and_recovery_required(self):
         self.w.hello_apis.update({NEW: 40, OLD: 41})
         self.assertEqual(self.update(), 5)
@@ -290,13 +349,15 @@ class NativeTest(unittest.TestCase):
         self.assertFalse(self.journal()['running_verified'])
         self.assertTrue(self.w.path(GUARD).exists())
 
-    def legacy_terminal(self, phase='completed'):
+    def legacy_terminal(self, phase='completed', old=OLD, target=PREVIOUS):
         self.assertEqual(self.update(), 0)
         record = self.journal()
-        installed = PREVIOUS if phase == 'completed' else OLD
-        record.update(phase=phase, completion=phase, target_sha256=SHA(PREVIOUS),
+        installed = target if phase == 'completed' else old
+        record.update(phase=phase, completion=phase, old_sha256=SHA(old), target_sha256=SHA(target),
                       installed_sha256=SHA(installed), commit_sha256=SHA(installed))
+        record['original_process']['sha256'] = SHA(old)
         record['verified_process']['sha256'] = SHA(installed)
+        self.w.path(STATE + '/' + record['transaction_id'] + '/robotd').write_bytes(old)
         raw = (json.dumps(record) + '\n').encode()
         self.w.path(N.JOURNAL).write_bytes(raw)
         self.w.path(TARGET).write_bytes(installed)
@@ -313,8 +374,8 @@ class NativeTest(unittest.TestCase):
             return {'ready': True} if payload == {'op': 'readiness'} else {'ok': True, 'status': {'listening': False, 'music': False}}
         return mock.patch.object(N, 'json_socket', side_effect=readiness)
 
-    def assert_legacy_upgrade(self, phase):
-        record, raw = self.legacy_terminal(phase)
+    def assert_legacy_upgrade(self, phase, old=OLD, target=PREVIOUS):
+        record, raw = self.legacy_terminal(phase, old, target)
         history = STATE + '/' + record['transaction_id'] + '/journal.json'
         audit = {self.w.path(H.LAST), self.w.path(H.OPLOG)}
         files = {str(p): p.read_bytes() for p in Path(self.tmp).rglob('*') if p.is_file() and p not in audit}
@@ -339,8 +400,20 @@ class NativeTest(unittest.TestCase):
     def test_legacy_rolled_back44_can_upgrade_and_preserves_history(self):
         self.assert_legacy_upgrade('rolled_back')
 
-    def test_legacy_archive_power_cut_preserves_journal_and_retry_is_idempotent(self):
-        record, raw = self.legacy_terminal()
+    def test_legacy_completed46_from44_status_and_upgrade_preserve_history(self):
+        self.assert_legacy_upgrade('completed', OLD, STARTUP)
+
+    def test_legacy_completed46_from45_status_and_upgrade_preserve_history(self):
+        self.assert_legacy_upgrade('completed', PREVIOUS, STARTUP)
+
+    def test_legacy_rolled_back46_to44_status_and_upgrade_preserve_history(self):
+        self.assert_legacy_upgrade('rolled_back', OLD, STARTUP)
+
+    def test_legacy_rolled_back46_to45_status_and_upgrade_preserve_history(self):
+        self.assert_legacy_upgrade('rolled_back', PREVIOUS, STARTUP)
+
+    def assert_legacy_archive_power_cut(self, old=OLD, target=PREVIOUS):
+        record, raw = self.legacy_terminal(old=old, target=target)
         history = STATE + '/' + record['transaction_id'] + '/journal.json'
         original = H.write_atomic
         def cut(ctx, path, data, *args, **kwargs):
@@ -352,10 +425,16 @@ class NativeTest(unittest.TestCase):
                 self.update()
             self.assertEqual(self.w.path(N.JOURNAL).read_bytes(), raw)
             self.assertEqual(self.w.path(history).read_bytes(), raw)
-            self.assertEqual(self.w.path(TARGET).read_bytes(), PREVIOUS)
+            self.assertEqual(self.w.path(TARGET).read_bytes(), target)
             self.assertFalse(self.w.path(GUARD).exists())
             self.assertEqual(self.update(), 0)
         self.assertEqual(self.w.path(history).read_bytes(), raw)
+
+    def test_legacy_archive_power_cut_preserves_journal_and_retry_is_idempotent(self):
+        self.assert_legacy_archive_power_cut()
+
+    def test_legacy46_archive_power_cut_preserves_journal_and_retry_is_idempotent(self):
+        self.assert_legacy_archive_power_cut(PREVIOUS, STARTUP)
 
     def test_legacy_foreign_history_is_never_overwritten(self):
         record, raw = self.legacy_terminal()
@@ -383,9 +462,11 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(self.w.path(TARGET).read_bytes(), PREVIOUS)
         self.assertFalse(self.w.path(GUARD).exists())
 
-    def test_legacy_tampered_incomplete_or_inconsistent_state_never_mutates(self):
-        record, _ = self.legacy_terminal()
-        cases = [({'schema': 'foreign'}, None), ({'old_sha256': SHA(PREVIOUS)}, None),
+    def assert_legacy_refusals(self, old=OLD, target=PREVIOUS):
+        record, _ = self.legacy_terminal(old=old, target=target)
+        cases = [({'schema': 'foreign'}, None), ({'old_sha256': SHA(NEW)}, None),
+                 ({'old_sha256': SHA(STARTUP)}, None),
+                 ({'old_sha256': SHA(PREVIOUS), 'target_sha256': SHA(PREVIOUS)}, None),
                  ({'target_sha256': SHA(OLD)}, None), ({'active': True}, None),
                  ({'restore_pending': True}, None), ({'cleanup_pending': True}, None),
                  ({'phase': 'prepared'}, None), ({'phase': 'old_restored'}, None),
@@ -407,7 +488,7 @@ class NativeTest(unittest.TestCase):
                         with self.assertRaises(H.Stop): self.update(action)
                     self.assertEqual(self.w.calls, before)
                     self.assertEqual(self.w.path(N.JOURNAL).read_bytes(), raw)
-                    self.assertEqual(self.w.path(TARGET).read_bytes(), PREVIOUS)
+                    self.assertEqual(self.w.path(TARGET).read_bytes(), target)
                     if marker:
                         self.assertEqual(self.w.path(marker).read_bytes(), b'preserve marker')
                         self.w.path(marker).unlink()
@@ -417,6 +498,12 @@ class NativeTest(unittest.TestCase):
             for action in ('status', 'install', 'recover'):
                 with self.assertRaises(H.Stop): self.update(action)
 
+    def test_legacy_tampered_incomplete_or_inconsistent_state_never_mutates(self):
+        self.assert_legacy_refusals()
+
+    def test_legacy46_tampered_incomplete_or_inconsistent_state_never_mutates(self):
+        self.assert_legacy_refusals(PREVIOUS, STARTUP)
+
     def test_legacy_incomplete_record_requires_recovery_using_previous_updater(self):
         record, _ = self.legacy_terminal()
         record.update(active=True, phase='old_restored')
@@ -425,6 +512,15 @@ class NativeTest(unittest.TestCase):
             self.update('recover')
         self.assertEqual(error.exception.result, 'native_recovery_required')
         self.assertIn('.45', str(error.exception))
+
+    def test_legacy46_incomplete_record_requires_original_signed_updater(self):
+        record, _ = self.legacy_terminal(old=PREVIOUS, target=STARTUP)
+        record.update(active=True, phase='old_restored')
+        self.w.path(N.JOURNAL).write_text(json.dumps(record))
+        with self.legacy_identity(), self.assertRaises(H.Stop) as error:
+            self.update('recover')
+        self.assertEqual(error.exception.result, 'native_recovery_required')
+        self.assertIn('.46', str(error.exception))
 
     def test_fixed_arguments_reject_arbitrary_paths_and_confirmation(self):
         for args in ({'action':'shell'}, {'action':'install'}, {'action':'recover','confirmed':1},
