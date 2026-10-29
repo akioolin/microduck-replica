@@ -106,8 +106,9 @@ The successful board backup is:
 It contains original files, manifest and restore ownership/mode metadata. The
 transaction rolls back replaced files on failure and restores the prior services.
 
-The source branches and artifacts are retained locally. This hotfix has not been
-merged into a published image or GitHub software release. A future formal native
-update must synchronize the reviewed binary SHA/size/source, IPC 41 and supported
-installed hashes in the native-update package metadata; the previous release
-still pins build .45. No installer allowlist was weakened for this local fix.
+This record describes the earlier scoped local deployment. The source branches
+and artifacts are retained. Formal software 2026.10.29 carries the same reviewed
+native binary with synchronized SHA/size/source, IPC 41 and verified .44/.45
+predecessors; its packaging, installer compatibility and publication evidence are
+recorded separately in `2026-10-29-startup-software-release.md`. No installer
+allowlist was weakened for the local fix. No new SD image is required.
