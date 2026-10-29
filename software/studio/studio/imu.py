@@ -18,6 +18,8 @@ import time
 from . import helper, imu_calib
 from .robotd import fresh_calib
 from .rpc import RpcError, Timeout, Unreachable, call_once
+from .startup_status import imu_diagnostic
+from .estop import STARTING_PHASES
 
 MAX_SAMPLES = 6000          # 一次 solve 最多收这么多读数（5 步 × 每步 ≤ 600 还有富余），防页面发个巨包
 ON_DUCK = ("总线 ID 200 的 IMU 由主程序启动时自动识别。I²C IMU 要在第一次开机前接好；之后才接的，要用 SSH 运行 "
@@ -51,6 +53,10 @@ def imu_bus_metadata(bus):
                 or any(profile != profiles[0] for profile in profiles[1:])
                 or (bindings and profiles and bindings[0][1] != profiles[0])):
             error = "主程序报告了不支持或不一致的 IMU 协议 / 类型：待确认，不能使用旧方向或继续标定"
+    # Startup diagnostics are display-only. Cached legacy identity cannot bind a
+    # mounting calibration while the new daemon is still refusing initialization.
+    if "imu_observation" in native and bus.get("phase") in STARTING_PHASES:
+        infos = []
     return (infos[0] if infos and isinstance(infos[0], dict) else None,
             profiles[0] if profiles else None, error)
 
@@ -179,6 +185,7 @@ class ImuBackend:
             reader = {"state": ("streaming" if s_imu.get("ready") else "missing"), "errors": 0}
         return {
             "t": "imu", "mode": bus.get("mode"), "source": source, "chip_setting": None, "mount": mount,
+            "diagnostic": imu_diagnostic(self.rd),
             "imu_bus": bus_imu_of(bus) if source == "bus" else None,
             "configured_imu_profile": configured_profile(bus),
             "profile_error": bus_profile_error(bus, calib, source),

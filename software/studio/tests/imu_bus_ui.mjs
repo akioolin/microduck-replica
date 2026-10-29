@@ -52,6 +52,39 @@ try {
     draw();
   })()`);
   await wait('document.querySelector(".imu-page")', 'IMU page');
+  assert.equal(await js(`!!document.querySelector('.imu-diagnostic')`), false, 'normal control without startup evidence keeps its normal health display');
+  // The actual IMU component must show a diagnostic board even while all motion
+  // samples and servo responses are unavailable; it cannot call this calibrated.
+  await js(`window.savedProps=structuredClone({st:props.st,imu:props.imu});
+    props.st={mode:'motion',posture:'starting',imu:{status:'missing'},servos:{online:0,total:15},
+      joints_age_ms:null,gravity:null,guard:null};
+    props.imu={mode:'motion',source:'bus',ready:false,mount:null,imu_bus:null,redo:{},
+      configured_imu_profile:'legacy',profile_selection:{can_start:false},
+      diagnostic:{status:'identified',responding:true,age_ms:20,sample_valid:true,sensor_ready:true,
+        sample_fresh:null,info:{protocol:'feetech',board:'imu_to_dxl',identity:[1],profile:'legacy'}}}; draw()`);
+  await wait(`document.querySelector('.imu-diagnostic')`, 'independent diagnostic shown');
+  assert.match(await js(`document.querySelector('.imu-diagnostic').innerText`), /已识别.*有数据/);
+  assert.match(await js(`document.querySelector('.imu-diagnostic').innerText`), /IMU-to-DXL.*Feetech.*200/);
+  assert.match(await js(`document.querySelector('.imu-diagnostic').innerText`), /不代表.*安装方向.*运动/);
+  assert.doesNotMatch(await js(`document.querySelector('.sv-metrics').innerText`), /方向已确认/);
+  assert.equal(await js(`!!document.querySelector('.imu-big:not([disabled])')`), false);
+  for (const [status, expected] of [['data_wait','等待数据'], ['no_response','未应答'],
+    ['stale','诊断已过期'], ['unknown','诊断未知']]) {
+    await js(`props.imu={...props.imu,diagnostic:{...props.imu.diagnostic,status:${JSON.stringify(status)},responding:null,info:null}};draw()`);
+    await wait(`document.querySelector('.imu-diagnostic').innerText.includes(${JSON.stringify(expected)})`, 'diagnostic '+status);
+    assert.doesNotMatch(await js(`document.querySelector('.imu-diagnostic').innerText`), /IMU-to-DXL/);
+  }
+  await js(`props.imu={...props.imu,diagnostic:{status:'identified',info:{protocol:'feetech',board:'imu_to_dxl'}}}; props.live=false;draw()`);
+  await wait(`document.querySelector('.imu-diagnostic').innerText.includes('诊断未知')`, 'browser disconnect invalidation');
+  assert.doesNotMatch(await js(`document.querySelector('.sv-metrics').innerText`), /IMU-to-DXL/);
+  await js(`props.live=true;props.diagnosticElapsed=200;
+    props.imu={...props.imu,diagnostic:{status:'identified',age_ms:2800,info:{protocol:'feetech',board:'imu_to_dxl'}}};draw()`);
+  await wait(`document.querySelector('.imu-diagnostic').innerText.includes('诊断已过期')`, 'browser receipt age added');
+  assert.doesNotMatch(await js(`document.querySelector('.sv-metrics').innerText`), /IMU-to-DXL/);
+  await js(`props.diagnosticElapsed=0;props.imu={...props.imu,diagnostic:{status:'unknown',responding:true,info:null}};draw()`);
+  await wait(`document.querySelector('.imu-diagnostic').innerText.includes('有应答 · 类型待确认')`, 'unknown identity response');
+  await js(`props.st=savedProps.st;props.imu=savedProps.imu;props.live=true;props.diagnosticElapsed=0;draw()`);
+  await pause(120);
   assert.match(await js('document.querySelector(".imu-side").innerText'), /FT6.*Feetech/);
   assert.doesNotMatch(await js('document.body.innerText'), /只认 FT6/);
   assert.match(await js('document.body.innerText'), /支持 FT6、IMU-to-DXL（Feetech）；SFLP 124\/12（Dynamixel 2\.0）/);
@@ -164,6 +197,68 @@ try {
   await wait(`calls.some(c=>c.name==='relax')`, 'Space emergency relax retained');
   assert.deepEqual(await js(`calls.find(c=>c.name==='relax').args`), {});
   await js(`replies.shift()({ok:true,data:{}})`);
+  // Render the real overview band with only unrelated dependencies supplied by
+  // the fixture. Missing servos and diagnostic IMU evidence are separate cells.
+  await js(`(async()=>{
+    const source=await (await fetch('/app.js')).text();
+    const component=source.slice(source.indexOf('function Band('),source.indexOf('function Band(')+source.slice(source.indexOf('function Band(')).indexOf('// ----------------', 1));
+    const {html,h,render}=await import('/vendor/preact-htm.module.js');
+    const {imuDiagnosticCopy}=await import('/startup-status.js');
+    const Band=Function('html','useStickyHeight','boardCell','padCell','BatteryCell','Badge','SensorBandCells','api','imuDiagnosticCopy',
+      component+';return Band;')(html,()=>null,()=>({big:'—'}),()=>({word:'—'}),()=>null,()=>null,()=>null,{},imuDiagnosticCopy);
+    const root=document.createElement('aside');root.id='overview-band';document.body.append(root);
+    window.drawBand=(diagnostic,gray=false,source='bus')=>render(h(Band,{st:{posture:'starting',servos:{online:0,total:15},imu:{source,status:'missing',diagnostic}},gray,live:!gray,onSame:()=>{}}),root);
+    drawBand({status:'identified',info:{protocol:'feetech',board:'imu_to_dxl',profile:'legacy'}});
+  })()`);
+  await wait(`document.querySelector('#overview-band a[href="#/imu"]').innerText.includes('已识别')`, 'overview independent IMU');
+  assert.match(await js(`document.querySelector('#overview-band').innerText`), /舵机\s*0\s*\/ 15/);
+  assert.match(await js(`document.querySelector('#overview-band a[href="#/imu"]').innerText`), /IMU-to-DXL.*Feetech/);
+  assert.doesNotMatch(await js(`document.querySelector('#overview-band a[href="#/imu"]').innerText`), /没读到|正常|方向已确认/);
+  await js(`drawBand({status:'identified',info:{protocol:'feetech',board:'imu_to_dxl'}},true)`);
+  await wait(`document.querySelector('#overview-band a[href="#/imu"]').innerText.includes('诊断未知')`, 'stale overview invalidation');
+  for (const [status, word] of [['data_wait','已识别 · 等待数据'], ['no_response','未应答'], ['stale','诊断已过期'], ['unknown','诊断未知']]) {
+    await js(`drawBand({status:${JSON.stringify(status)},info:null})`);
+    await wait(`document.querySelector('#overview-band a[href="#/imu"]').innerText.includes(${JSON.stringify(word)})`, 'overview '+status);
+  }
+  await js(`drawBand({status:'identified',info:{protocol:'feetech',board:'imu_to_dxl'}},false,'lsm6dsv16x')`);
+  await wait(`document.querySelector('#overview-band a[href="#/imu"]').innerText.includes('没读到')`, 'I2C retains configured source health');
+  assert.doesNotMatch(await js(`document.querySelector('#overview-band a[href="#/imu"]').innerText`), /ID 200|IMU-to-DXL/);
+  // Exercise the real Main subscription, so a reconnect and new source/profile
+  // state cannot revive its cached IMU message before the next imu event arrives.
+  await js(`(async()=>{
+    const source=await (await fetch('/app.js')).text();
+    const component=source.slice(source.indexOf('function Main('),source.indexOf('function Login('));
+    const {html,h,render,useState,useEffect,useRef}=await import('/vendor/preact-htm.module.js');
+    const root=document.createElement('aside');root.id='main-fixture';document.body.append(root);
+    window.mainListener=null;
+    const link={status:'open',on:fn=>{mainListener=fn;return()=>{}},connect:()=>{}};
+    const blank=()=>null;
+    const ImuPage=({imu})=>html\`<output id="main-imu">\${imu?.diagnostic?.info?.board || imu?.imu_bus?.board || 'unknown'}</output>\`;
+    const names=['html','useState','useEffect','useRef','useRoute','useNow','useStickyHeight','link',
+      'padActivity','scrollFor','OVERVIEW','Overview','Nav','TopBar','ServoBar','TabBar','ImuPage',
+      'STALE_ALARM_MS','STUDIO_TEST'];
+    const values=[html,useState,useEffect,useRef,()=>'/imu',()=>performance.now(),()=>null,link,
+      {inView:false,subscribe:()=>()=>{}},()=>{},()=>false,blank,blank,blank,blank,blank,ImuPage,3000,true];
+    const Main=Function(...names,component+';return Main;')(...values);
+    render(h(Main,{duck:{}}),root);
+  })()`);
+  await wait(`typeof mainListener==='function'`, 'Main subscription');
+  const mainState = {t:'state',mode:'motion',build:'test47',posture:'starting',robotd_ok:true,robotd_age_ms:0,
+    imu:{source:'bus',configured_imu_profile:'legacy',diagnostic:{status:'identified',info:{board:'imu_to_dxl'}}}};
+  await js(`window.mainState=${JSON.stringify(mainState)}; mainListener(mainState);
+    mainListener({t:'imu',source:'bus',configured_imu_profile:'legacy',diagnostic:mainState.imu.diagnostic})`);
+  await wait(`document.querySelector('#main-imu').textContent==='imu_to_dxl'`, 'Main initial diagnostic');
+  await js(`mainListener({t:'_status',status:'closed'});mainListener({t:'_status',status:'open'});mainListener(mainState)`);
+  await wait(`document.querySelector('#main-imu').textContent==='unknown'`, 'Main clears previous connection IMU');
+  await js(`mainListener({t:'imu',source:'bus',configured_imu_profile:'legacy',diagnostic:mainState.imu.diagnostic})`);
+  await wait(`document.querySelector('#main-imu').textContent==='imu_to_dxl'`, 'Main new connection IMU');
+  await js(`mainListener({...mainState,imu:{...mainState.imu,configured_imu_profile:'qinmo',diagnostic:{status:'unknown',info:null}}})`);
+  await wait(`document.querySelector('#main-imu').textContent==='unknown'`, 'Main profile change invalidates IMU');
+  await js(`mainListener({...mainState,posture:'holding',imu:{...mainState.imu,diagnostic:{status:'unknown'}}});
+    mainListener({t:'imu',source:'bus',configured_imu_profile:'legacy',imu_bus:{board:'ft6'},diagnostic:{status:'unknown'}})`);
+  await wait(`document.querySelector('#main-imu').textContent==='ft6'`, 'Main ordinary control board');
+  await js(`mainListener({...mainState,imu:{...mainState.imu,diagnostic:{status:'unknown'}}})`);
+  await wait(`document.querySelector('#main-imu').textContent==='unknown'`, 'Main same-build restart clears control board');
   assert.deepEqual(errors, []);
   process.stdout.write('IMU bus browser assertions passed\n');
 } finally {

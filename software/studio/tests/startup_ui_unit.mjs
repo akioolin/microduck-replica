@@ -41,3 +41,20 @@ test('generic waits stay generic, and old backend messages retain their existing
   assert.equal(ui.startupStageCopy({ posture: 'starting' }), null);
   assert.equal(ui.startupStageCopy({ posture: 'holding', start_wait: { text: 'old error' } }), null);
 });
+
+test('independent IMU diagnostic labels never imply mounting or control readiness', () => {
+  assert.equal(typeof ui.imuDiagnosticCopy, 'function');
+  const info = {protocol:'feetech',board:'imu_to_dxl',identity:[1],profile:'legacy'};
+  for (const [status, word] of [['identified','已识别 · 有数据'], ['data_wait','已识别 · 等待数据'],
+    ['no_response','未应答'], ['stale','诊断已过期'], ['unknown','诊断未知']]) {
+    const copy = ui.imuDiagnosticCopy({status,info: ['identified','data_wait'].includes(status) ? info : null});
+    assert.equal(copy.word, word);
+    assert.doesNotMatch(JSON.stringify(copy), /正常|方向已确认|可走|已校准/);
+    if (status === 'identified') assert.match(copy.board, /IMU-to-DXL.*Feetech.*200/);
+  }
+  assert.equal(ui.imuDiagnosticCopy(undefined).word, '诊断未知');
+  assert.equal(ui.imuDiagnosticCopy({status:'identified',info}, false).word, '诊断未知');
+  assert.equal(ui.imuDiagnosticCopy({status:'unknown',responding:true,info:null}).word, '有应答 · 类型待确认');
+  assert.equal(ui.imuDiagnosticCopy({status:'identified',age_ms:2800,info}, true, 200).word, '诊断已过期');
+  assert.equal(ui.imuDiagnosticCopy({status:'identified',age_ms:2800,info}, true, 199).word, '已识别 · 有数据');
+});

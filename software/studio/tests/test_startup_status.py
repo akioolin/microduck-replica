@@ -12,7 +12,7 @@ sys.path[:0] = [str(HERE.parent), str(HERE.parent / "deps"), str(HERE.parent / "
 
 from studio import onboard, servo  # noqa: E402
 from studio.commit import CommitService  # noqa: E402
-from studio.robotd import API_VERSION, Robotd  # noqa: E402
+from studio.robotd import API_VERSION, KNOWN_BUILDS, Robotd  # noqa: E402
 from studio.state import JOINT_NAMES, summarize  # noqa: E402
 from studio.tune import Tune  # noqa: E402
 
@@ -199,7 +199,10 @@ class StartupObservationsTest(unittest.TestCase):
         self.assertIsNotNone(view["rows"][0]["deg"])
 
     def test_api_version_matches_native_observation_contract(self):
-        self.assertEqual(API_VERSION, 41)
+        self.assertEqual(API_VERSION, 42)
+        for build in ("0791fcd-feetech-qinmo-control.45", "0791fcd-feetech-qinmo-control.46",
+                      "0791fcd-feetech-qinmo-control.47"):
+            self.assertIn(build, KNOWN_BUILDS)
 
 
 class StartupCopyTest(unittest.TestCase):

@@ -20,6 +20,7 @@
 import { html, useState, useEffect, useRef } from './vendor/preact-htm.module.js';
 import { Duck3D } from './duck3d.js';
 import { TwoStep } from './confirm.js';
+import { imuDiagnosticCopy } from './startup-status.js';
 
 const RULES = {
   // ---- 跟 imu_calib.py RULES 同名同值（改一边就要改另一边，端到端测试会抓） ----
@@ -59,8 +60,11 @@ const BUS_BOARD_CN = { ft6: 'FT6', imu_to_dxl: 'IMU-to-DXL', sflp_124_12: 'SFLP 
 const BUS_PROTOCOL_CN = { feetech: 'Feetech', dxl2: 'Dynamixel 2.0' };
 const unsupportedProfile = info => info && info.profile !== undefined && !['legacy', 'qinmo'].includes(info.profile);
 const unsupportedTransport = info => info && (!['feetech', 'dxl2'].includes(info.protocol) || unsupportedProfile(info));
-function chipLabel(imu) {
+function chipLabel(imu, live = true, diagnosticElapsed = 0) {
   if (imu?.source !== 'bus') return CHIP_CN[imu?.source] || imu?.source || '—';
+  if (live === false) return CHIP_CN.bus;
+  const diagnostic = imuDiagnosticCopy(imu?.diagnostic, live, diagnosticElapsed);
+  if (diagnostic.board) return diagnostic.board;
   const info = imu.imu_bus;
   if (imu?.profile_error || unsupportedTransport(info)) return 'IMU 协议 / 类型待确认';
   return info ? `${BUS_BOARD_CN[info.board] || info.board || '总线小板'} · ${BUS_PROTOCOL_CN[info.protocol] || info.protocol}（ID 200）`
@@ -524,22 +528,22 @@ function freshText(st, live, age) {
   return { live: true, text: `实时 · ${(a / 1000).toFixed(1)} 秒前` };
 }
 
-function StatusCard({ st, imu, live, age }) {
+function StatusCard({ st, imu, live, age, diagnosticElapsed }) {
   const S = statusOf(st, imu, live);
   const F = freshText(st, live, age);
   const src = imu?.source;
   const guard = st?.guard;
   return html`<section class=${'board imu-card' + (F.live ? '' : ' imu-stale')}>
-    <h3>现在${F.live ? '' : html` <span class="sv-small">（${F.text}，下面是断线前的）</span>`}</h3>
+    <h3>控制与安装方向${F.live ? '' : html` <span class="sv-small">（姿态读数：${F.text}）</span>`}</h3>
     <div class="imu-kv">
       <span>方向</span><b class=${'imu-word ' + (S.kind || '')}>${S.kind === 'warn' || S.kind === 'bad' ? html`<span class=${'badge ' + S.kind}>${S.kind === 'bad' ? '×' : '!'}</span>` : S.kind === 'ok' ? '✓ ' : ''}${S.word}</b>
       <span></span><span class="sv-small">${S.hint}</span>
-      <span>芯片</span><b>${chipLabel(imu)}</b>
+      <span>芯片</span><b>${chipLabel(imu, live, diagnosticElapsed)}</b>
       ${src === 'bus' ? html`<span>配置类型</span><b>${imu?.configured_imu_profile === 'qinmo' ? 'Qinmo（已配置）'
         : imu?.configured_imu_profile === 'legacy' ? '现有板卡自动识别'
         : imu?.metadata_error || unsupportedTransport(imu?.imu_bus) ? '待确认（诊断数据不受支持）'
         : imu?.configured_imu_profile != null ? '不支持的类型（需确认）' : '现有板卡（旧版主程序）'}</b>
-        <span>实际连接</span><b>${imu?.imu_bus ? chipLabel(imu) : '尚未连接'}</b>
+        <span>实际连接</span><b>${imuDiagnosticCopy(imu?.diagnostic, live, diagnosticElapsed).board || (imu?.imu_bus ? chipLabel(imu, live, diagnosticElapsed) : '尚未连接')}</b>
         <span>角速度单位</span><b class="num">${imu?.profile_error || unsupportedTransport(imu?.imu_bus) ? '待确认（诊断数据不受支持）'
           : imu?.imu_bus?.profile === 'qinmo' ? '原始值 ÷ 16.4 °/s'
           : imu?.imu_bus ? '原始值 × 0.0175 °/s' : '连接后显示'}</b>` : null}
@@ -555,7 +559,21 @@ function StatusCard({ st, imu, live, age }) {
   </section>`;
 }
 
-function ChipCard({ imu, link, live }) {
+function DiagnosticCard({ st, imu, live, diagnosticElapsed }) {
+  if (imu?.source !== 'bus' || (st?.posture !== 'starting' && !imu?.diagnostic?.age_ms
+      && imu?.diagnostic?.responding == null)) return null;
+  const d = imuDiagnosticCopy(imu?.diagnostic, live, diagnosticElapsed);
+  return html`<section class="board imu-card imu-diagnostic" aria-label="总线 IMU 只读诊断">
+    <h3>总线 IMU 只读诊断</h3>
+    <p class=${'imu-word ' + d.kind}>${d.word}</p>
+    ${d.board ? html`<p>${d.board}</p>` : null}
+    <p class="sv-small">${d.hint}</p>
+    ${live !== false && imu?.diagnostic?.error ? html`<p class="sv-small">原文：${imu.diagnostic.error}</p>` : null}
+    <p class="sv-small">板卡应答独立于舵机；不代表已确认安装方向、可采集标定或可运动。姿态和标定仍使用主程序的控制读数。</p>
+  </section>`;
+}
+
+function ChipCard({ imu, link, live, diagnosticElapsed }) {
   const [profile, setProfile] = useState(imu?.configured_imu_profile || 'legacy');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -573,7 +591,7 @@ function ChipCard({ imu, link, live }) {
     } finally { setBusy(false); }
   };
   return html`<section class="board imu-card">
-    <h3>芯片 <span class="sv-small">正在用：${chipLabel(imu)}</span></h3>
+    <h3>芯片 <span class="sv-small">正在用：${chipLabel(imu, live, diagnosticElapsed)}</span></h3>
     <p class="sv-small">现有自动识别支持 FT6、IMU-to-DXL（Feetech）；SFLP 124/12（Dynamixel 2.0）。FT6 和自家小板按已知身份识别；通用 DXL2 只确认兼容布局。</p>
     <p class="sv-small">Qinmo 没有文档可验证的唯一身份，需在这里选择一次。保存后以后开机会沿用此类型与单位；页面显示「已配置」，不会把兼容布局当成厂商认证。换板或装法改变后，必须重新验证安装方向。</p>
     ${imu?.source === 'bus' || imu?.source == null ? html`<label class="sv-small">总线 IMU 类型
@@ -980,7 +998,7 @@ export const _test = { RULES, STEPS, TILTS, feed, freshWizard, startCollect, end
 // ---------------- 页面 ----------------
 
 /** live / age：跟总览同一个判断（app.js 的 Main 里算好传进来）；没传就只看 st.joints_age_ms。 */
-export function ImuPage({ st, imu, link, live, age, pd }) {
+export function ImuPage({ st, imu, link, live, age, diagnosticElapsed = 0, pd }) {
   const W = useRef(freshWizard());
   const [, bump] = useState(0);
   const redraw = () => bump((n) => n + 1);
@@ -1042,7 +1060,7 @@ export function ImuPage({ st, imu, link, live, age, pd }) {
       <span class="sv-metrics num">
         <span>方向 <b>${S.word}</b></span>
         <span>倾角 <b>${fmt(st?.tilt_deg)}°</b>${F.live ? '' : `（${F.text}）`}</span>
-        <span>芯片 <b>${chipLabel(imu)}</b></span>
+        <span>芯片 <b>${chipLabel(imu, live, diagnosticElapsed)}</b></span>
       </span>
     </header>
     <div class="sv-sub">IMU 告诉策略「机身往哪边歪」。大家装的都不一样，装歪几度站着看不出来，一走就往前冲（一号鸭 10-12 装歪 8.5° 就是这样），所以要重新校一下。</div>
@@ -1053,12 +1071,13 @@ export function ImuPage({ st, imu, link, live, age, pd }) {
       <${ImuStage} st=${st} stale=${!F.live} corr=${res?.ok ? res.correction : null} parts=${res?.parts}
         collecting=${w.phase === 'collect'} arrow=${arrow} cue=${cue} />
       <div class="imu-side">
-        <${StatusCard} st=${st} imu=${imu} live=${live} age=${age} />
+        <${StatusCard} st=${st} imu=${imu} live=${live} age=${age} diagnosticElapsed=${diagnosticElapsed} />
+        <${DiagnosticCard} st=${st} imu=${imu} live=${live} diagnosticElapsed=${diagnosticElapsed} />
         <${CoarseCard} st=${st} imu=${imu} link=${link} live=${live} />
         <${StanceCard} st=${st} imu=${imu} pd=${pd} link=${link} live=${live} />
         <${CollectCard} st=${st} imu=${imu} live=${live} W=${w} act=${act} muted=${muted} setMuted=${setMuted} />
         <${ResultCard} res=${w.phase === 'done' ? res || w.result : null} imu=${imu} link=${link} onRedo=${onRedo} />
-        <${ChipCard} imu=${imu} link=${link} live=${live} />
+        <${ChipCard} imu=${imu} link=${link} live=${live} diagnosticElapsed=${diagnosticElapsed} />
       </div>
     </div>
   </div>`;
