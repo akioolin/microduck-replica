@@ -26,7 +26,8 @@ one-off scanner's saved output would be stale and is also rejected.
   even if the control thread ceases publishing while IPC remains responsive.
 - `rows`: one row per configured servo, in configured joint order. Each row has
   `id`, `name`, `responding` (true/false/null for answered/missed/not checked),
-  `reply_age_ms`, `feedback_age_ms`, and nullable telemetry fields
+  `check_age_ms` (most recent actual READ request sent to this ID),
+  `reply_age_ms` (most recent valid reply), `feedback_age_ms`, and nullable telemetry fields
   `position_raw`, `speed_raw`, `load_raw`, `current_raw`, `volts`,
   `temperature_c`. Ages are measured at snapshot capture; add snapshot `age_ms`
   when determining freshness. Null values are never fabricated as zero.
@@ -37,6 +38,12 @@ Validated 56/15 telemetry can supply those values even if the same transaction
 later fails due to another missing device, an invalid IMU or a missing host sample.
 An unanswered latest request changes responding to false; unrelated reads do not
 refresh old servo evidence. Missing/unsupported IMUs never become usable samples.
+Fresh missing responses are aged by `check_age_ms`; their last valid reply can
+legitimately be null or old. A known responding row additionally needs a fresh
+`reply_age_ms`, while displaying feedback also requires fresh `feedback_age_ms`.
+Studio hides feedback after a latest miss or unknown state; it does not introduce
+a historical-value view. Independent expiry means a new presence-only reply cannot
+refresh or indefinitely expose old telemetry.
 
 Publish `native` diagnostics on every relevant startup wait, including initialization
 failure after opening the bus and pose adoption failures. Diagnostic-only data

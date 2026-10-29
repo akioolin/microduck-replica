@@ -19,21 +19,21 @@ Files: `duck-control/src/feetech.rs`, a focused observation module if needed,
 `duck-ipc-proto/src/lib.rs`, and native mechanism documentation. Root is
 `F:/chengshenzhilu/Robot/Microduck/.worktrees/startup-native-20261029/microduck-hd1910/firmware`.
 
-- [ ] Add failing serial-peer regressions: valid servo replies plus no host sample
+- [x] Add failing serial-peer regressions: valid servo replies plus no host sample
   still return an IMU error but expose fifteen fresh observations; no bus IMU and
   partial/malformed replies preserve only validated servo presence; frozen IPC
   snapshot ages; observations never satisfy all-joints/control-sample gates.
-- [ ] Run focused tests and record their expected assertion failures.
-- [ ] Capture validated reply observations without changing transaction results.
+- [x] Run focused tests and record their expected assertion failures.
+- [x] Capture validated reply observations without changing transaction results.
   Serialize exactly the nullable fields defined in the design; use native sample
   times and age snapshots at IPC response time.
-- [ ] Publish the diagnostic object on startup failure paths and pending-readiness
+- [x] Publish the diagnostic object on startup failure paths and pending-readiness
   paths. Keep torque-off, verification, atomic samples and retry scheduling intact.
-- [ ] Set API 41 and `.46` build metadata. Update the owning mechanism document.
-- [ ] Run focused regressions and relevant existing core/startup/motion tests.
+- [x] Set API 41 and `.46` build metadata. Update the owning mechanism document.
+- [x] Run focused regressions and relevant existing core/startup/motion tests.
   Test command: `cargo +1.99.0 test -p duck-control feetech -- --test-threads=1`;
   robotd tests use their existing focused startup filter and one test thread.
-- [ ] Self-review and commit the native change; provide the wire fixture and
+- [x] Self-review and commit the native change; provide the wire fixture and
   red/green test evidence to the coordinator.
 
 ## Task 2: Studio consumes independent observations
@@ -42,37 +42,38 @@ Files: `software/studio/studio/state.py`, `servo.py`, `onboard.py`, `commit.py`,
 `tune.py`, a shared `startup_status.py` helper if useful, `robotd.py`, relevant
 Python tests and minimal existing web rendering. Worktree is this plan's repository.
 
-- [ ] Add failing tests for fresh observations during host IMU failure, partial
+- [x] Add failing tests for fresh observations during host IMU failure, partial
   responses, unknown values, aged snapshots, stale IPC, and ordinary motion data.
   Fixture: `native.servo_observations = {attempted: true, age_ms: 0, rows: [...]} `,
-  each row uses the exact nullable fields in the design.
-- [ ] Run those tests and confirm failures are caused by the missing feature.
-- [ ] Normalize the native observations without opening serial ports. A row is
+  each row uses the exact nullable fields in the design, including `check_age_ms`
+  for latest attempted READ and `reply_age_ms` for last valid response.
+- [x] Run those tests and confirm failures are caused by the missing feature.
+- [x] Normalize the native observations without opening serial ports. A row is
   responding only with fresh native and IPC evidence; feedback is fresh only if
   its own age also passes 3000 ms. Missing fields remain null.
-- [ ] Reuse normalized evidence for servo counter and read-only servo table.
+- [x] Reuse normalized evidence for servo counter and read-only servo table.
   Fix startup IMU copy consistently across onboarding/commit/tuning surfaces.
   Controls and calibration readiness retain their existing gates.
-- [ ] Set Studio expected API 41. Run targeted state/servo/onboarding/commit/tune
+- [x] Set Studio expected API 41. Run targeted state/servo/onboarding/commit/tune
   tests, then the existing full Studio suite once. Self-review and commit.
 
 ## Task 3: Integration, review and board hotfix
 
-- [ ] Review native contract against Studio fixture and stale semantics; run an
+- [x] Review native contract against Studio fixture and stale semantics; run an
   integration fixture through real Studio state serialization and rendering.
-- [ ] Obtain specification and quality reviews, repair actionable findings with
+- [x] Obtain specification and quality reviews, repair actionable findings with
   regression tests, then rerun affected checks only.
-- [ ] Export the reviewed native commit with canonical LF; supply verified ONNX
+- [x] Export the reviewed native commit with canonical LF; supply verified ONNX
   fixtures from the existing pinned build payload. Build with
   `cargo +1.99.0 zigbuild --locked --release --jobs 2 --target aarch64-unknown-linux-gnu.2.31 -p robotd --bin robotd`.
-- [ ] Inspect ELF architecture/GLIBC requirements and QEMU `--version`, `--help`,
+- [x] Inspect ELF architecture/GLIBC requirements and QEMU `--version`, `--help`,
   and `deployment-info`; record source and binary SHA256.
-- [ ] Identify installed Studio paths. Back up only replaced files and the native
+- [x] Identify installed Studio paths. Back up only replaced files and the native
   binary, and record checksums of original config/calibration.
-- [ ] Confirm fifteen torque registers are zero and no calibration/update job is
+- [x] Confirm fifteen torque registers are zero and no calibration/update job is
   active, stop services, atomically replace reviewed hotfix files, start robotd
   and Studio, and leave the physical controller paused for this bench session.
-- [ ] With the original I2C source still absent, verify real busStatus/Studio report
+- [x] With the original I2C source still absent, verify real busStatus/Studio report
   fifteen responding servos and the IMU-specific wait, without control ticks,
   goal writes or torque enabling. Verify snapshot expiry in a controlled fixture.
-- [ ] Write verification/rollback notes and report the actual tested result.
+- [x] Write verification/rollback notes and report the actual tested result.
