@@ -203,7 +203,7 @@ class ReadinessTest(Base):
         self.assertEqual(mode["action"]["do"], "robotd")                    # 「去看日志页」
         self.rd.starting_since = None
         self.rd.bus.set({"build": "fake", "mode": "commissioning", "phase": "waiting_for_bus", "error": "Sync Read timeout"})
-        self.assertIn("舵机没上电）：Sync Read timeout", self.item("mode")["text"])
+        self.assertIn("等待总线设备响应（phase=waiting_for_bus）：Sync Read timeout", self.item("mode")["text"])
         bus = dict(Rd(self.calib).bus.value, phase="read_error", last_cycle_error="missing IDs [21]")
         self.rd.bus.set(bus)
         mode = self.item("mode")

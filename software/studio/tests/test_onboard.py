@@ -102,7 +102,7 @@ class RowTest(unittest.TestCase):
         self.assertIn("verified IMU mounting", h["raw"])
         h = O.header_of(inp(bus=dict(stuck, error="Feetech Sync Read timeout; missing IDs [21]"), calib=None))
         self.assertEqual(h["kind"], "starting")
-        self.assertIn("舵机没上电", h["text"])
+        self.assertIn("等待总线设备响应", h["text"])
         self.assertEqual(O.header_of(inp(bus={"mode": "commissioning", "phase": "ready"}))["kind"], "commissioning")
         self.assertEqual(O.header_of(inp(servo_session=True))["kind"], "servo")
 
@@ -119,7 +119,8 @@ class RowTest(unittest.TestCase):
         self.assertIn("去日志页", h["text"])
         self.assertNotIn("10 秒", h["text"])
         h = O.header_of(inp(bus=dict(boot, phase="waiting_for_bus", error="Feetech Sync Read timeout"), starting_s=40))
-        self.assertIn("舵机没上电", h["text"])                               # 有原话的等总线照旧说清楚是什么
+        self.assertIn("等待总线设备响应", h["text"])
+        self.assertEqual(h["raw"], "Feetech Sync Read timeout")
         for phase in ("ready", "moving", "stop_unconfirmed", "power_pending", "read_error"):
             with self.subTest(phase=phase):
                 self.assertEqual(O.header_of(inp(bus={"mode": "commissioning", "phase": phase}))["kind"], "commissioning")
@@ -436,7 +437,7 @@ class CpuViewTest(unittest.TestCase):
         self.assertIsNone(v["throttled"])
         self.assertIn("12 秒没更新", v["why"])
         self.assertIn("调试模式", cpu_view(None, None, {"mode": "commissioning"}, True)["why"])
-        self.assertIn("等舵机总线", cpu_view(None, None, {"mode": "motion", "phase": "waiting_for_bus"}, True)["why"])
+        self.assertIn("等待总线设备响应", cpu_view(None, None, {"mode": "motion", "phase": "waiting_for_bus"}, True)["why"])
         self.assertIn("没在跑", cpu_view(None, None, None, False)["why"])
 
         class Servo:

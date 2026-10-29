@@ -18,6 +18,7 @@ import { WifiCard, WifiSettings, DuckAddresses } from './wifi.js';
 import { TwoStep } from './confirm.js';
 import { ModelsPage } from './models.js';
 import { CameraPage, TofPage, SensorBandCells } from './sensors.js';
+import { startupStageCopy } from './startup-status.js';
 
 const STALE_GRAY_MS = 1000;   // 超过 1 秒没新数据：数值变灰
 const STALE_ALARM_MS = 3000;  // 超过 3 秒：横幅；卸力按钮仍可按（只要跟 Studio 的连接在）
@@ -228,7 +229,7 @@ function EStop({ st, live, open }) {
 function TopBar({ duck, st, live, age, open, hideEStop }) {
   // 顶栏先说现在是什么模式（出厂标定模式 / 写完切运动模式），再带姿势；标定模式没有策略，别写成「调试中」。
   // 连续报启动阶段超过 30 秒（Studio 从这次连上算）：写「一直报启动中」（10-20 真机：旧 fork 的标定模式永远报 configuring_bus）
-  const postureText = st ? ({ starting: st.starting_long ? '一直报启动中' : '启动中', absent: '主程序没在跑', homing: '在站起来',
+  const postureText = st ? ({ starting: st.start_wait?.text || (st.starting_long ? '一直报启动中' : '启动中'), absent: '主程序没在跑', homing: '在站起来',
     servo_session: '调舵机中' }[st.posture] || WAS[st.posture] || '状态不明') : null;
   const modeText = !st ? '连接中'
     : st.mode === 'commissioning' ? (st.posture === 'commissioning' ? '标定模式' : `标定模式 · ${postureText}`)
@@ -303,6 +304,7 @@ function stageCopy(st, live, name, age) {
   switch (st.posture) {
     case 'absent': return { h: '鸭子主程序没在跑', sub: '可能正在重启（约 2 秒）。注意：主程序停了不会卸力，舵机可能还顶着。', stale: true };
     case 'starting':
+      if (startupStageCopy(st)) return startupStageCopy(st);
       // 连续报启动阶段超过 30 秒：不再说「通常 10 秒内完成」，给「去日志页」（10-20 真机：旧 fork 的标定模式永远报 configuring_bus）
       if (st.starting_long) {
         return { h: '主程序一直报「启动中」', act: { href: '#/logs', label: '去日志页' },

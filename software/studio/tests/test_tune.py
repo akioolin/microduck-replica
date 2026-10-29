@@ -321,7 +321,7 @@ class TuneViewTest(unittest.TestCase):
         t, rd, _ = self.make("commissioning")
         self.assertEqual(t.view()["run"]["phase"]["word"], "调试模式")
         t, rd, _ = self.make("starting")
-        self.assertEqual(t.view()["run"]["phase"]["word"], "在等舵机总线")
+        self.assertEqual(t.view()["run"]["phase"]["word"], "等待总线设备响应")
         rd.present = False
         self.assertEqual(t.view()["run"]["phase"]["word"], "主程序没在跑")
         rd.present, rd.paused = True, "调舵机"

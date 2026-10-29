@@ -670,6 +670,7 @@ class CommitService:
         from .estop import STARTING_LONG_S, STARTING_PHASES
         from .imu import bus_protocol_mismatch, mount_of
         from .state import JOINT_CN, STILL_STARTING, starting_secs
+        from .startup_status import startup_wait
         self.reload()
         rd = rd or self.rd
         cal, calib = self._calibration(rd)
@@ -693,13 +694,14 @@ class CommitService:
         fresh = age is not None and age <= 3.0
         starting_s = starting_secs(rd, bus)
         err = bus.get("error") if isinstance(bus, dict) else None
+        wait = startup_wait(bus)
         if not online:
             mode_ok, mode_text = False, "连上主程序才判得出现在是什么模式"
         elif mode == "commissioning" and phase in STARTING_PHASES:
             # 标定模式的启动报告（还没第一次读成功）：不是「last_sample 里只有 0 颗」。旧 fork 永远停在这里（10-20 真机验收）
             mode_ok = False
-            if phase == "waiting_for_bus":
-                mode_text = "标定模式，主程序在等舵机总线（多半是舵机没上电）" + (f"：{err}" if err else "")
+            if wait:
+                mode_text = f"标定模式，{wait['text']}（phase={phase}）" + (f"：{err}" if err else "")
             elif starting_s is not None and starting_s >= STARTING_LONG_S:
                 mode_text = f"标定模式，主程序一直报「启动中」（phase={phase}，已经 {starting_s} 秒了）：{STILL_STARTING}"
             else:
@@ -718,11 +720,13 @@ class CommitService:
             mode_ok = phase == "control"
             if mode_ok:
                 mode_text = "运动模式：总线已经打开"
+            elif wait:
+                mode_text = f"运动模式，{wait['text']}（phase={phase}）" + (f"：{err}" if err else "")
             else:
                 err = bus.get("error") if isinstance(bus, dict) else None
                 mode_text = (f"运动模式，但主程序还没进控制阶段（phase={phase or '?'}）"
                              + (f"：{err}" if err else "")
-                             + "。多半是标定没通过检查或舵机总线没打开：先看舵机电源，再照日志页的提示处理")
+                             + "。照日志页的提示处理")
         else:
             mode_ok, mode_text = False, f"主程序在 {mode or '?'} 模式、{phase or '?'} 阶段"
         items.append({"key": "mode", "label": "主程序模式", "ok": mode_ok, "text": mode_text,

@@ -29,6 +29,7 @@ import threading
 import time
 
 from .bus import feetech
+from .startup_status import servo_observations
 
 IDS = [20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 10, 11, 12, 13, 14]     # 跟 robotd 的 JOINT_NAMES 同一个顺序
 NAMES = {
@@ -667,6 +668,16 @@ def view_from_robotd(bus, directions, state="closed", error=None, sim=False):
     """没接管总线时，舵机页照样有表：数据来自主程序的 busStatus（它本来就在读舵机），只能看。
     角度跟接管以后同一个算法（方向 ×（读数 − 2048）），接管前后数字对得上。
     主程序的 position_rad 是按它自己的零位（zero_raw）算的，这里不用它。"""
+    # Robotd carries IPC receipt/error evidence. The legacy dict form stays valid
+    # for ordinary feedback, but cannot establish fresh startup observations.
+    rd = bus if hasattr(bus, "bus") else None
+    if rd is not None:
+        bus = rd.bus.value
+    observations = servo_observations(bus, present=getattr(rd, "present", None),
+                                      bus_age_s=rd.bus.age() if rd is not None else None,
+                                      bus_error=getattr(rd.bus, "error", None) if rd is not None else None)
+    if observations is not None:
+        return _view_startup_observations(observations, directions, state, error, sim)
     native = (bus or {}).get("native") if isinstance(bus, dict) and isinstance(bus.get("native"), dict) else {}
     joints = {j.get("id"): j for j in (native.get("joints") or []) if isinstance(j, dict)}
     torque_on = native.get("torque_enabled")
@@ -697,6 +708,33 @@ def view_from_robotd(bus, directions, state="closed", error=None, sim=False):
         "holding": sum(1 for r in rows if r["torque"] == 1), "all_off": False, "latched": False,
         "relaxing": False, "last_relax": None, "rows": rows,
     }
+
+
+def _view_startup_observations(observations, directions, state, error, sim):
+    by_id = {row["id"]: row for row in observations["rows"]}
+    rows, volts = [], []
+    for sid in IDS:
+        row = by_id.get(sid, {})
+        cn, en = NAMES[sid]
+        volt = row.get("volts")
+        if volt is not None:
+            volts.append(volt)
+        rows.append({
+            "id": sid, "cn": cn, "en": en, "group": GROUP[sid],
+            "dir": DEFAULT_DIRECTIONS[sid] if directions is None else directions.get(sid, -1),
+            "raw": row.get("position_raw"), "deg": None, "volt": volt,
+            "temp": row.get("temperature_c"), "temp_limit": None, "load": row.get("load_raw"),
+            "speed_raw": row.get("speed_raw"), "current_raw": row.get("current_raw"), "current_ma": None,
+            "responding": row.get("responding"), "fresh": row.get("responding") is True,
+            "feedback_fresh": row.get("feedback_fresh", False), "age_ms": row.get("check_age_ms"),
+            "torque": None, "status": None, "moving": None, "p": None, "d": None, "mode": None, "offset": None,
+            "comm": {key: None for key in ("asked", "ok", "missed", "alarm", "streak", "max_streak")},
+        })
+    avg_v = round(sum(volts) / len(volts), 2) if volts else None
+    return {"t": "servo", "state": state, "error": error, "sim": sim, "source": "robotd", "diagnostic": True,
+            "port": "主程序", "online": observations["online"], "total": len(IDS),
+            "hz": None, "avg_volts": avg_v, "battery_pct": battery_percent(avg_v), "drop_rate": None, "bus": None,
+            "holding": None, "all_off": False, "latched": False, "relaxing": False, "last_relax": None, "rows": rows}
 
 
 def _sim_home():

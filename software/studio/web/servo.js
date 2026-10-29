@@ -12,6 +12,7 @@ import { Duck3D, JOINT_NAMES } from './duck3d.js';
 import { drawServoLabels } from './labels.js';
 import { TwoStep } from './confirm.js';
 import { Stepper } from './stepper.js';
+import { servoReplyStatus } from './startup-status.js';
 
 // 官方参考姿势：microduck_rl scene.xml 的关键帧（servo-web 同一份），弧度、模型约定，按 JOINT_NAMES 顺序。
 const POSES = {
@@ -59,6 +60,7 @@ function ServoStage({ sv, pose, setPose, selected, onSelect }) {
     const d = duckRef.current;
     if (!d || !ready) return;
     if (pose === 'live') {
+      if (sv?.diagnostic) return;   // Raw startup feedback does not establish a calibrated pose.
       if (!sv?.rows?.length) return;
       d.setJoints(sv.rows.map((r) => (r.raw == null ? 0 : r.dir * (r.raw - 2048) * 2 * Math.PI / 4096)));
     } else {
@@ -78,13 +80,13 @@ function ServoStage({ sv, pose, setPose, selected, onSelect }) {
   }, [ready, pose]);
 
   return html`<div class="sv-stage" ref=${boxRef}>
-    <canvas ref=${canvasRef}></canvas>
+    <canvas ref=${canvasRef} style=${{ visibility: pose === 'live' && sv?.diagnostic ? 'hidden' : 'visible' }}></canvas>
     <div class="sv-poses" role="tablist" aria-label="3D 显示">
       ${[['live', '实时'], ...Object.entries(POSES).map(([k, p]) => [k, p.label])].map(([k, label]) =>
         html`<button role="tab" aria-selected=${pose === k} class=${pose === k ? 'on' : ''} onClick=${(e) => { e.currentTarget.blur(); setPose(k); }}>${label}</button>`)}
     </div>
     ${!ready ? html`<span class="sv-loading">3D 模型加载中…</span>` : null}
-    <span class="sv-note">${pose !== 'live' ? '参考姿势 · 不是鸭子现在的样子' : '拖动转视角 · 点舵机选中'}</span>
+    <span class="sv-note">${pose !== 'live' ? '参考姿势 · 不是鸭子现在的样子' : sv?.diagnostic ? '启动诊断只有原始反馈，暂不显示标定姿态' : '拖动转视角 · 点舵机选中'}</span>
     ${moved ? html`<button class="reset-view" onClick=${(e) => { e.currentTarget.blur(); duckRef.current?.resetView(); setMoved(false); }}>回正</button>` : null}
   </div>`;
 }
@@ -117,6 +119,8 @@ function Why() {
 // ---------------- 15 颗：同一套列宽，上下对齐 ----------------
 
 function commDot(r) {
+  const reply = servoReplyStatus(r);
+  if (reply) return html`<span class=${'sv-dot ' + reply.kind} title=${reply.word} aria-label=${reply.word}></span>`;
   const c = r.comm || {};
   const tip = c.asked == null
     ? `累计丢 ${c.missed} 次 · 现在连丢 ${c.streak} 次（主程序统计）`
@@ -148,6 +152,7 @@ function Row({ r, open, selected, onSelect, op, follow, setHint }) {
   const val = drag ?? r.raw ?? 2048;
   const stop = (e) => e.stopPropagation();
   const c = r.comm || {};
+  const reply = servoReplyStatus(r);
   return html`<div class=${'sv-row' + (r.fresh ? '' : ' stale') + (selected ? ' sel ' + r.group : '')} onClick=${() => onSelect(selected ? null : r.id)}>
     <span class=${'sv-id ' + r.group}>${r.id}</span>
     <span class="sv-name" title=${r.en}>${r.cn}</span>
@@ -156,10 +161,10 @@ function Row({ r, open, selected, onSelect, op, follow, setHint }) {
     <span class="num r">${fmt(drag ?? r.raw)}</span>
     <span class="num r sv-deg">${r.deg == null ? '—' : sign(r.deg) + '°'}</span>
     <span class=${'num r ' + tempClass(r)} title=${r.temp_limit ? `这颗的温度上限 ${r.temp_limit} °C` : ''}>${fmt(r.temp)}°C</span>
-    <label class=${'sv-switch' + (r.torque === 1 ? ' on' : '')} onClick=${stop} title=${r.torque === 1 ? '在保持：点一下松开' : '松着：点一下保持（先对准当前位置再上力，不会冲）'}>
+    <label class=${'sv-switch' + (r.torque === 1 ? ' on' : '')} onClick=${stop} title=${reply ? '启动诊断：只显示应答情况，扭矩状态未知' : r.torque === 1 ? '在保持：点一下松开' : '松着：点一下保持（先对准当前位置再上力，不会冲）'}>
       <input type="checkbox" checked=${r.torque === 1} disabled=${!open}
         onChange=${(e) => op({ op: 'torque', on: e.target.checked ? 1 : 0, ids: [r.id] })} />
-      <span>${r.torque === 1 ? '保持' : '松'}</span>
+      <span>${reply ? reply.word : r.torque === 1 ? '保持' : '松'}</span>
     </label>
     <button class="sv-mini" disabled=${!open} onClick=${(e) => { stop(e); calibHandler && calibHandler(String(r.id)); }}
       title="中位校准：把这颗现在的位置设成零位 2048，校完自动保持">中位</button>
@@ -167,10 +172,12 @@ function Row({ r, open, selected, onSelect, op, follow, setHint }) {
     ${selected ? html`<div class="sv-more num" onClick=${stop}>
       <span>电压 <b>${fmt(r.volt, 1)} V</b></span><span>负载 <b>${fmt(r.load)}</b></span>
       ${r.current_ma != null ? html`<span>电流 <b>${fmt(r.current_ma)} mA</b></span>` : null}
+      ${r.current_raw != null ? html`<span>电流原始值 <b>${fmt(r.current_raw)}</b></span>` : null}
+      ${r.speed_raw != null ? html`<span>速度原始值 <b>${fmt(r.speed_raw)}</b></span>` : null}
       ${r.offset != null ? html`<span title="寄存器 31：舵机里存的零位偏移">偏移 <b>${r.offset}</b></span>` : null}
       ${r.p_run != null ? html`<span title=${`运行中的 P / D / 限力（回读 RAM 50 / 51 / 48；上力前 Studio 写成跟主程序一样，标黄 = 不一样）。EEPROM 里存的 P / D（21 / 22）：${r.p ?? '?'} / ${r.d ?? '?'}`}>P/D/限力 <b class=${r.gains_ok === false ? 'warn' : ''}>${r.p_run}/${r.d_run}/${r.limit ?? '?'}</b></span>`
         : r.p != null ? html`<span title="位置环 P / D（寄存器 21 / 22）">P/D <b>${r.p}/${r.d}</b></span>` : null}
-      <span>通信 <b>丢 ${c.missed ?? 0}${c.asked != null ? ` / 问 ${c.asked}` : ''}</b></span>
+      <span>通信 <b>${reply ? reply.word : `丢 ${c.missed ?? 0}${c.asked != null ? ` / 问 ${c.asked}` : ''}`}</b></span>
       ${r.status ? html`<span class="sv-alarm">状态位 ${r.status}</span>` : null}
       <span class="sv-spacer"></span>
       <span>方向</span><button class="sv-mini" disabled=${!open} onClick=${() => op({ op: 'set_dir', id: r.id, dir: -r.dir })}
@@ -181,7 +188,7 @@ function Row({ r, open, selected, onSelect, op, follow, setHint }) {
 
 // 舵机数据每秒推 10 次：这一行显示的东西没变就不重画（15 行带滑块，整页重画会让 3D 转起来卡）
 const rowSig = (p) => { const r = p.r, c = r.comm || {};
-  return [r.raw, r.deg, r.volt, r.temp, r.load, r.current_ma, r.torque, r.fresh, r.dir, r.offset, r.p, r.d, r.status,
+  return [r.raw, r.deg, r.volt, r.temp, r.load, r.current_ma, r.current_raw, r.speed_raw, r.responding, r.torque, r.fresh, r.dir, r.offset, r.p, r.d, r.status,
     r.p_run, r.d_run, r.limit, r.gains_ok, c.missed, c.streak, p.open, p.selected, p.follow].join('|'); };
 class RowPure extends Component {
   shouldComponentUpdate(next) { return rowSig(next) !== rowSig(this.props) || next.op !== this.props.op; }
@@ -495,18 +502,18 @@ export function ServoPage({ sv, link, leaveGuards }) {
         <div class="sv-titleline">
           <h1>舵机</h1>
           ${sv?.rows ? html`<div class="sv-stats num">
-            <div><b>${sv.online}<small>/${sv.total}</small></b><span>在线</span></div>
+            <div><b>${sv.online ?? '—'}<small>/${sv.total}</small></b><span>在线</span></div>
             <div><b>${fmt(sv.avg_volts, 1)}<small> V</small></b><span>平均电压</span></div>
             <div><b>${open ? fmt(sv.hz, 0) : '—'}<small> Hz</small></b><span>刷新</span></div>
             <div><b>${open && dr != null ? (dr * 100).toFixed(1) : '—'}<small> %</small></b><span>丢帧</span></div>
-            <div><b>${sv.holding}</b><span>保持</span></div>
+            <div><b>${sv.holding ?? '—'}</b><span>保持</span></div>
           </div>` : null}
         </div>
         <div class="sv-sub">${open
           ? html`<b class="sv-live">调舵机中</b> · ${sv.port} · 主程序停着，手柄不能用${sv.latched ? ' · 已全部卸力' : ''} · 离开这页舵机照样保持；点「交还主程序」才交还
             <${HandBackButton} link=${link} />`
           : busy ? '正在接管舵机总线…'
-            : html`没接管 · 只读`}
+            : html`没接管 · 只读${sv?.diagnostic ? ' · 主程序启动诊断 · 原始反馈' : ''}`}
         <span class="sv-port">串口
           <select value=${pick} onFocus=${loadPorts} onChange=${(e) => setPick(e.target.value)} disabled=${open}
             title=${open ? '调舵机中不能换串口：先交还主程序' : ''}>

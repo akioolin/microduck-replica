@@ -58,6 +58,7 @@ from .estop import STARTING_LONG_S, STARTING_PHASES
 from .imu import mount_of
 from .robotd import fresh_calib
 from .state import JOINT_CN, MAX_AGE, STILL_STARTING, posture, starting_secs
+from .startup_status import startup_wait
 
 ONBOARD_FILE = "onboarding.json"
 SERVO_IDS = (20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 10, 11, 12, 13, 14)   # 跟 servo.IDS 一样（这里不 import servo：它带串口）
@@ -298,8 +299,9 @@ def header_of(inp):
     if phase in STARTING_PHASES:
         if err and CALIB_ERR.search(str(err)):
             return {"ok": False, "kind": "stuck_calib", "text": "主程序不让上力：标定或 IMU 方向没过", "raw": str(err)}
-        if phase == "waiting_for_bus":
-            text = "在等舵机总线（多半是舵机没上电）"
+        wait = startup_wait(bus)
+        if wait:
+            text = wait["text"]
         elif (inp.get("starting_s") or 0) >= STARTING_LONG_S:
             # 超过 30 秒还报启动阶段：不再说「还在启动」（10-20 真机：旧 fork 的标定模式永远报 configuring_bus）
             text = f"主程序一直报「启动中」，超过 {STARTING_LONG_S:.0f} 秒了：{STILL_STARTING}"

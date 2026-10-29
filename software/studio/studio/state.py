@@ -21,6 +21,7 @@ import time
 
 from .estop import STARTING_LONG_S, STARTING_PHASES
 from .startup import startup_todo
+from .startup_status import servo_observations, startup_wait
 
 JOINT_NAMES = ["left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle",
                "neck_pitch", "head_pitch", "head_yaw", "head_roll", "mouth",
@@ -133,7 +134,8 @@ def cpu_view(health, health_age, bus, present, servo=None, ob=None):
         elif (bus or {}).get("mode") == "commissioning":
             why = "调试模式下主程序不报温度"
         elif (bus or {}).get("phase") in STARTING_PHASES:
-            why = "主程序在等舵机总线，这时不报温度"
+            wait = startup_wait(bus)
+            why = f"主程序{wait['text'] if wait else '还在启动'}，这时不报温度"
         elif h is None:
             why = f"健康检查 {health_age:.0f} 秒没更新" if health_age is not None else "还没读到健康检查"
         else:
@@ -195,6 +197,15 @@ def summarize(rd, duck, servo=None, now=None, ob=None, bat=None, net=None, commi
     servos = {"online": len(fresh) if joints else None, "total": len(joints) or 15, "hottest": hottest,
               "stale": [JOINT_CN.get(j.get("name"), j.get("name")) for j in joints
                         if isinstance(j, dict) and j.get("feedback_fresh") is False]}
+    observations = servo_observations(bus, present=rd.present, bus_age_s=bus_age,
+                                      bus_error=getattr(rd.bus, "error", None))
+    if observations is not None:
+        rows = observations["rows"]
+        temperatures = [r for r in rows if r["temperature_c"] is not None]
+        hot = max(temperatures, key=lambda r: r["temperature_c"]) if temperatures else None
+        servos = {"online": observations["online"], "total": len(rows) or 15,
+                  "hottest": {"name": JOINT_CN.get(hot["name"], hot["name"]), "c": hot["temperature_c"]} if hot else None,
+                  "stale": [JOINT_CN.get(r["name"], r["name"]) for r in rows if r["responding"] is False]}
     imu_h = (health or {}).get("imu") or {}
     if imu_h.get("ready") is False:
         imu_status = "missing"
@@ -264,6 +275,7 @@ def summarize(rd, duck, servo=None, now=None, ob=None, bat=None, net=None, commi
         "build": (bus or {}).get("build"),
         "posture": pose,
         "start_error": (bus or {}).get("error") if pose == "starting" else None,
+        "start_wait": startup_wait(bus) if pose == "starting" else None,
         # 连续报启动阶段多少秒（这次连上算）、超没超过 30 秒：总览头图、顶栏、待办改口「一直报启动中」
         "starting_s": starting_s,
         "starting_long": starting_s is not None and starting_s >= STARTING_LONG_S,
@@ -332,7 +344,11 @@ def todo(health, bus, servos, imu_status, cpu, loop, battery, pose, health_age=N
                       "hint": f"电量、温度、IMU 这些{when}；看日志里的 robotd 那几行"})
     if pose == "starting":
         raw = (bus or {}).get("error")
-        if starting_s is not None and starting_s >= STARTING_LONG_S:
+        wait = startup_wait(bus)
+        if wait:
+            items.append({"key": "starting", "level": "warn", "msg": wait["text"],
+                          "hint": f"原文：{raw}" if raw else "去日志页看主程序最后说了什么"})
+        elif starting_s is not None and starting_s >= STARTING_LONG_S:
             items.append({"key": "starting", "level": "warn", "msg": "主程序一直报「启动中」",
                           "hint": f"已经 {starting_s} 秒了。" + (f"原文：{raw}。去日志页看主程序最后说了什么" if raw
                                                                   else STILL_STARTING)})

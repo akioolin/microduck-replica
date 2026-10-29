@@ -35,6 +35,7 @@ from pathlib import Path
 from .imu import mount_of
 from .robotd import fresh_calib
 from .startup import _hello_at, walk_unloaded
+from .startup_status import startup_wait
 
 ETC = "etc/robot/feetech-ft5"
 BASE = "opt/robot/feetech-ft5-r5"
@@ -64,7 +65,7 @@ MOUTH_WARN = 10                                  # 嘴巴最大开度 ≤ 10%：
 SCALE_USE_CN = {"joint_uniform": "走路（联合模型自己的参数）", "walking": "走路", "hold": "原地保持", "held": "没在推理",
                 "homing": "回站姿", "sit": "坐着", "rise": "站起来", "ground_pick": "低头捡东西", "roulade": "前滚翻",
                 "kick_left": "左脚踢", "kick_right": "右脚踢", "stand": "站立网络", "walk": "走路"}
-PHASE_CN = {"control": ("控制中", "ok"), "configuring_bus": ("在配置舵机总线", "warn"), "waiting_for_bus": ("在等舵机总线", "warn"),
+PHASE_CN = {"control": ("控制中", "ok"), "configuring_bus": ("在配置舵机总线", "warn"), "waiting_for_bus": ("等待总线设备响应", "warn"),
             "configuration_error": ("配置错了", "bad"), "configuring_uart": ("在配置串口", "warn"), "ready": ("调试模式", "warn"),
             "read_error": ("调试模式 · 读舵机出错", "bad")}
 MAX_JSON = 2 << 20            # 普通 json / toml 最大 2 MB
@@ -329,6 +330,9 @@ class Tune:
         if not bus:
             return {"word": "还没读到", "kind": None, "why": None, "error": None}
         word, kind = PHASE_CN.get(bus.get("phase"), (bus.get("phase") or "不知道", None))
+        wait = startup_wait(bus)
+        if wait:
+            word, kind = wait["text"], "warn"
         if bus.get("mode") == "commissioning" and bus.get("phase") == "ready":
             word, kind = "调试模式", "warn"
         return {"word": word, "kind": kind, "mode": bus.get("mode"), "phase": bus.get("phase"),

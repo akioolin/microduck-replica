@@ -713,7 +713,7 @@ def build_app(*, auth, robotd, log, web_dir, duck, names=(), state_dir=None, dev
                     if servo is not None and (me.get("route") == "/servos" or servo.state in ("open", "opening")):
                         # 接管了总线：推总线上读到的整张表；没接管：用主程序的数据拼一张只读的表
                         await send(servo.snapshot() if servo.state == "open"
-                                   else view_from_robotd(robotd.bus.value, servo.directions, servo.state,
+                                   else view_from_robotd(robotd, servo.directions, servo.state,
                                                          servo.error, servo.sim))
                     if imu is not None and time.monotonic() - last_imu >= 0.5:
                         last_imu = time.monotonic()        # IMU 页要的芯片、安装方向、读数状态：半秒一次够了
