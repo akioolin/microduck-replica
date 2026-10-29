@@ -59,11 +59,36 @@ mounting, torque, a calibrated pose or an automatic source change.
 
 ## Final packaging and publication
 
-Final full Studio, frozen source/package hashes, old ARM engine install/rollback/
-crash recovery, bootstrap file inventory, draft server attachment digests and public
-old-client verification are recorded under `artifacts/software-release-20261030/`.
-The final publication evidence update records actual results and source revision.
+- Frozen software source: `2ba8e5d8ae4a4cf42f6284baf5dd817b412c4a5d`.
+- Official isolated Python 3.13 full Studio: **1392 tests, 81 environment
+  skips, success**, 329.338 seconds, `STUDIO_E2E=0`. The final runtime code was
+  stable before this run; the following source commit adds release documentation.
+- Signed outer package: 8089600 bytes, SHA256
+  `880803ef4143913e75e1f12b27ff75268c124dd4dbff4676b3dd6646779831b9`.
+- Frozen software archive SHA256: `e797b0a08a5ae7a0de3115e399a66c4316e33f8075be9d189590cb8a67559808`.
+- Both minisign signatures and exact native payload/module trust were checked by
+  the old ARM engine. Dry run, tampered hash/signature refusal, apply, rollback,
+  failed-health rollback and killed-process durable recovery passed in temporary
+  roots under QEMU. Stage one leaves the installed robotd untouched and restarts
+  only Studio/voice. This is not physical automatic-install acceptance.
+- All eleven local attachment hashes/sizes match GitHub server digests. The
+  bootstrap's 319 individual files, executable mode,
+  exact signed package, regular-file paths and original public key were checked.
+
+The frozen 20261027 client anonymously selected 2026.10.30 from the public
+catalog, downloaded the package, and verified both signatures with its
+original public key.
+
+Published: [microduck-software-v2026.10.30](https://github.com/fanhao375/microduck-replica/releases/tag/microduck-software-v2026.10.30). The
+`microduck-replica-image-20261027` image remains GitHub Latest. Existing compatible
+cards use the normal software catalog or offline bundle; no new image is required.
+The first-stage readiness conditions and separately confirmed native replacement
+still apply, as described in the user instructions.
+
+Evidence in `artifacts/software-release-20261030/`: `frozen-build.json`, full Studio
+log/result, runtime provenance, old-engine verification, local attachment inventory,
+and draft/public GitHub verification. Public attachments include signatures, SHA256
+files and `runtime-provenance.json` with exact source/artifact identities.
 
 This task did not deploy the new feature to a live device or validate an actual
 IMU-only board setup. Physical upgrade and walking acceptance are not claimed.
-Existing cards use the software update; no new SD image is required.

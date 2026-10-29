@@ -2,17 +2,17 @@
 
 - [x] Trace the startup gate, web state mapping and signed updater baseline.
 - [x] Record approved diagnostic-only design and stable wire contract.
-- [ ] Native regression RED, bounded diagnostic implementation, both startup modes,
+- [x] Native regression RED, bounded diagnostic implementation, both startup modes,
   frozen-RPC aging and safety regression GREEN; IPC42/build.47; review.
-- [ ] Web regression RED, freshness/context-safe overview and IMU diagnostic UI,
+- [x] Web regression RED, freshness/context-safe overview and IMU diagnostic UI,
   browser checks and surrounding regression GREEN; review.
-- [ ] Build exact frozen ARM64 artifact and synchronize managed native updater,
+- [x] Build exact frozen ARM64 artifact and synchronize managed native updater,
   supported .44/.45/.46 predecessors and clean terminal journal handling.
-- [ ] Run final stable full Studio/updater suites and focused native baseline
+- [x] Run final stable full Studio/updater suites and focused native baseline
   comparison; document pre-existing failures rather than weakening checks.
-- [ ] Push reviewed source, freeze/sign software2026.10.30, assemble bootstrap,
+- [x] Push reviewed source, freeze/sign software2026.10.30, assemble bootstrap,
   verify original engine install/rollback/crash recovery and every attachment.
-- [ ] Publish GitHub software release, retain image Latest, verify anonymous old
+- [x] Publish GitHub software release, retain image Latest, verify anonymous old
   client discovery/download/signatures and record final evidence.
 
 The prior user authorization covers implementing independent diagnostics and
