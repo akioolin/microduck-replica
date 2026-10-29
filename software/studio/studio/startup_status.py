@@ -25,7 +25,7 @@ def startup_wait(bus):
     if _CALIBRATION_ERROR.search(error):
         return None
     native = bus.get("native") if isinstance(bus.get("native"), dict) else {}
-    if re.search(r"\bimu\b", error, re.I):
+    if re.search(r"\bimu(?:\s*200)?\b", error, re.I):
         source = native.get("imu_source")
         source = source if isinstance(source, str) and source else None
         return {"kind": "imu", "text": "等待 IMU 数据" + (f"（来源：{source}）" if source else ""),

@@ -222,7 +222,8 @@ class StartupCopyTest(unittest.TestCase):
     def test_host_and_bus_imu_errors_consistently_name_imu_and_configured_source(self):
         for mode in ("motion", "commissioning"):
             for source, error in (("lsm6dsv16x", "Feetech host IMU has no sample"),
-                                  ("bus", "Feetech bus IMU id=200 missing")):
+                                  ("bus", "Feetech bus IMU id=200 missing"),
+                                  ("bus", "IMU200: Feetech ID 200 response timeout")):
                 with self.subTest(mode=mode, source=source):
                     bus = startup_bus(mode=mode, error=error)
                     bus["native"]["imu_source"] = source
