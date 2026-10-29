@@ -104,6 +104,8 @@
 
 ## 💻 软件 · 复刻镜像与 Microduck Studio
 
+**2026-10-30 · 软件包更新：只接 IMU 也能独立诊断**：总线 IMU 不再被舵机启动检查挡住。没有或只接部分舵机时，总览与 IMU 页仍显示板卡应答、识别与样本状态；过期、断线及切换配置不会沿用旧结果。诊断不放行运动或标定写入。先升级网页，再明确确认主程序更新至 `.47` / API 42。[软件包与引导附件](https://github.com/fanhao375/microduck-replica/releases/tag/microduck-software-v2026.10.30) · [更新步骤与使用说明](docs/仅接IMU的独立诊断与软件更新-20261030.md)
+
 **2026-10-29 · 软件包更新：IMU 与舵机状态分开显示**：主程序等待 IMU 时，总览和舵机页继续显示已收到的舵机回包、原始位置、电压与温度，并区分缺失、未知和过期数据。先升级网页，再明确确认主程序更新至 `.46`，已有卡通过软件更新安装。[软件包与引导附件](https://github.com/fanhao375/microduck-replica/releases/tag/microduck-software-v2026.10.29) · [更新步骤与验收范围](docs/软件更新与独立设备状态说明-20261029.md)
 
 **2026-10-28 · 软件包更新（不重烧 SD 卡）**：已有设置页升级入口的用户先安装 `2026.10.28` 网页 / 语音包，重连后可承托卸力并明确确认主程序更新，再在 IMU 页选择 `Qinmo · Feetech`、验证方向。主程序自动更新仅支持已知 20261027 基线；现有板卡继续默认自动识别。Qinmo 实物与本版整机升级仍待验收，音乐跟拍和自由 AI 人声对话仍未解决。[软件包与引导附件](https://github.com/fanhao375/microduck-replica/releases/tag/microduck-software-v2026.10.28) · [现有用户更新步骤](docs/软件更新与Qinmo使用说明-20261028.md) · [Qinmo 网页使用](docs/Qinmo-IMU-网页使用.md)
