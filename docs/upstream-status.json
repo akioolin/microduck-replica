@@ -83,6 +83,53 @@
       },
       "tracked_development_releases": [
         {
+          "tag": "daemon-dev-configd-label-pin",
+          "url": "https://github.com/pollen-robotics/microduck/releases/tag/daemon-dev-configd-label-pin",
+          "published_at": "2026-10-29T13:48:16Z",
+          "version": "daemon 0.18.0-dev.1515.52b965e (configd-label-pin)",
+          "head_sha": "52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+          "prerelease": true,
+          "fixed_incremental_diff_url": "https://github.com/pollen-robotics/microduck/compare/a360b3843bb49fd48a635b39eabcb835d9fffecb...52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+          "change": "Default robot/phone pairing PIN can use the last six digits of the label serial read from beta ID EEPROM; an explicitly stored PIN retains precedence.",
+          "priority": "low_for_current_Radxa_replica; reassess_when_using_programmed_beta_ID_EEPROM",
+          "replica_integration": "not_integrated; no runtime, model, image, robot or online-page change",
+          "review": {
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/a360b3843bb49fd48a635b39eabcb835d9fffecb...52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+            "base_sha": "a360b3843bb49fd48a635b39eabcb835d9fffecb",
+            "head_sha": "52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+            "commits": 1,
+            "files": [
+              "configd/src/identity.rs",
+              "configd/src/main.rs",
+              "configd/src/store.rs"
+            ],
+            "api_version": 46,
+            "change": "Default robot/phone pairing PIN can use the last six digits of the label serial read from beta ID EEPROM; an explicitly stored PIN retains precedence.",
+            "hardware_dependency": {
+              "eeprom_path": "/sys/bus/i2c/devices/1-0050/eeprom",
+              "chip_named_by_author": "FT24C32A on official beta board",
+              "accepted_encoding": "First 18 bytes from address 0 must be ASCII decimal digits and not all ASCII zero; leading PIN zeros preserved.",
+              "encoding_confirmed_by_manufacturer": false,
+              "fallback": "Missing/unreadable, blank, zeroed, short or non-ASCII/binary/BCD data yields public factory PIN 000000 and a startup warning.",
+              "Radxa_ZERO_3W": "Without this programmed ID EEPROM, the default remains 000000; not a new PIN for our existing image."
+            },
+            "limitations": [
+              "Manufacturer EEPROM encoding and weekly unit counter behavior remain open questions in the PR.",
+              "If the unit counter resets each week, identical week-last-digit/unit combinations can repeat the six-digit PIN ten weeks apart.",
+              "is_default is implemented as PIN == 000000, rather than checking whether the PIN came from the label.",
+              "This is robot/client provisioning identity, not gamepad HID input or reconnect repair."
+            ],
+            "verification": {
+              "author_reported_configd_tests_passed": 61,
+              "author_reported_clippy_clean": true,
+              "author_reported_programmed_board_test": false,
+              "tracker": "Read all three fixed patches and relevant complete source; verified file blob IDs, actual tag/release/PR SHA and unchanged API46. No downloaded implementation/test execution or hardware access."
+            },
+            "priority": "low_for_current_Radxa_replica; reassess_when_using_programmed_beta_ID_EEPROM",
+            "replica_integration": "not_integrated; no runtime, model, image, robot or online-page change"
+          }
+        },
+        {
           "tag": "daemon-dev-precision-pad",
           "url": "https://github.com/pollen-robotics/microduck/releases/tag/daemon-dev-precision-pad",
           "published_at": "2026-10-28T13:55:42Z",
@@ -1198,6 +1245,53 @@
         }
       ],
       "pending_pull_requests": [
+        {
+          "number": 493,
+          "url": "https://github.com/pollen-robotics/microduck/pull/493",
+          "title": "configd: default the pairing PIN to the label serial's last six digits",
+          "state": "open",
+          "draft": false,
+          "merged_at": null,
+          "created_at": "2026-10-29T13:44:36Z",
+          "updated_at": "2026-10-29T13:48:11Z",
+          "head_sha": "52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+          "base_sha": "a360b3843bb49fd48a635b39eabcb835d9fffecb",
+          "review": {
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/a360b3843bb49fd48a635b39eabcb835d9fffecb...52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+            "base_sha": "a360b3843bb49fd48a635b39eabcb835d9fffecb",
+            "head_sha": "52b965eb27ff03e119d70df49bbf09e6ba67cd09",
+            "commits": 1,
+            "files": [
+              "configd/src/identity.rs",
+              "configd/src/main.rs",
+              "configd/src/store.rs"
+            ],
+            "api_version": 46,
+            "change": "Default robot/phone pairing PIN can use the last six digits of the label serial read from beta ID EEPROM; an explicitly stored PIN retains precedence.",
+            "hardware_dependency": {
+              "eeprom_path": "/sys/bus/i2c/devices/1-0050/eeprom",
+              "chip_named_by_author": "FT24C32A on official beta board",
+              "accepted_encoding": "First 18 bytes from address 0 must be ASCII decimal digits and not all ASCII zero; leading PIN zeros preserved.",
+              "encoding_confirmed_by_manufacturer": false,
+              "fallback": "Missing/unreadable, blank, zeroed, short or non-ASCII/binary/BCD data yields public factory PIN 000000 and a startup warning.",
+              "Radxa_ZERO_3W": "Without this programmed ID EEPROM, the default remains 000000; not a new PIN for our existing image."
+            },
+            "limitations": [
+              "Manufacturer EEPROM encoding and weekly unit counter behavior remain open questions in the PR.",
+              "If the unit counter resets each week, identical week-last-digit/unit combinations can repeat the six-digit PIN ten weeks apart.",
+              "is_default is implemented as PIN == 000000, rather than checking whether the PIN came from the label.",
+              "This is robot/client provisioning identity, not gamepad HID input or reconnect repair."
+            ],
+            "verification": {
+              "author_reported_configd_tests_passed": 61,
+              "author_reported_clippy_clean": true,
+              "author_reported_programmed_board_test": false,
+              "tracker": "Read all three fixed patches and relevant complete source; verified file blob IDs, actual tag/release/PR SHA and unchanged API46. No downloaded implementation/test execution or hardware access."
+            },
+            "priority": "low_for_current_Radxa_replica; reassess_when_using_programmed_beta_ID_EEPROM",
+            "replica_integration": "not_integrated; no runtime, model, image, robot or online-page change"
+          }
+        },
         {
           "number": 492,
           "url": "https://github.com/pollen-robotics/microduck/pull/492",
@@ -3257,37 +3351,25 @@
       "status": "Existing official article newly indexed in this snapshot; contact odometry and official validation are not replica hardware validation."
     }
   ],
-  "checked_at_utc": "2026-10-29T13:08:27.518098+00:00",
+  "checked_at_utc": "2026-10-29T14:08:15.957797+00:00",
   "latest_review": {
-    "default_branch_changes": true,
-    "new_stable_release": true,
+    "default_branch_changes": false,
+    "new_stable_release": false,
     "stable_release_tag": "daemon-v0.18.0",
     "stable_release_actual_sha": "a360b3843bb49fd48a635b39eabcb835d9fffecb",
-    "previous_tracked_prs_merged": true,
-    "merged_previously_tracked_prs": {
-      "pollen-robotics/microduck": [
-        489,
-        491
-      ]
-    },
+    "stable_assets_changed": false,
+    "previous_tracked_prs_merged": false,
     "new_pull_requests": {
       "pollen-robotics/microduck": [
-        492
+        493
       ]
     },
-    "new_development_releases": [],
-    "changed_pull_request_heads": {
-      "pollen-robotics/microduck": {
-        "489": "b35772dc90ed9bc35fc1e03fe068a31dfc595b15"
-      }
-    },
-    "moved_development_tags": [
-      "daemon-dev-main",
-      "daemon-dev-footsteps"
+    "new_development_releases": [
+      "daemon-dev-configd-label-pin"
     ],
-    "retired_development_tags": [
-      "daemon-dev-configure-tolerates-unknown-keys"
-    ],
+    "changed_pull_request_heads": {},
+    "moved_development_tags": [],
+    "retired_development_tags": [],
     "official_blog_new_articles": false,
     "official_blog_article_count": 3,
     "official_blog_latest_on": "2026-10-23",
@@ -3295,14 +3377,7 @@
     "models_replaced": false,
     "robot_connected": false,
     "image_built_or_published": false,
-    "integration_inference": "At stablea360b38, community_allowed still reads only base via read_to_string while editor writes user layer; static mismatch persists, not runtime reproduced.",
-    "notes": "Official0.18.0published12:57:56UTC at a360b38/API46. EightGitHub assets appeared during review; read2JSONmanifests, whose revision/package size/digest match tag and assetmetadata. No software archive/bootstrap download, signature verification, install or otherchannelassessment. Main9commits6files since priorcut, stable38commits51files since0.17.9. Footsteps now independentAPI47development, not stable. Config token/rollback caveats and static community reader mismatch persist. Local migrated0.17.9 source and physical acceptance unchanged.",
-    "asset_followup": {
-      "initial_asset_count": 0,
-      "initial_checked_at_utc": "2026-10-29T12:58:44.022533+00:00",
-      "asset_count": 8,
-      "checked_at_utc": "2026-10-29T13:08:27.518098+00:00"
-    }
+    "notes": "New open PR493 and same-source 0.18.0 development release propose label-serial-derived pairing PIN for programmed beta ID EEPROM. One commit/three configd files, API46 unchanged. No EEPROM on current Radxa means factory fallback persists; manufacturer encoding and counter reuse pending, no programmed-board test. Four default heads, stable tag/eight asset metadata, prior PR states/heads/bodies, model metadata and three-article blog unchanged. Local migration and image acceptance unchanged."
   },
   "replica_migration": {
     "recorded_on": "2026-10-27",
