@@ -1335,6 +1335,116 @@
       ],
       "pending_pull_requests": [
         {
+          "number": 500,
+          "url": "https://github.com/pollen-robotics/microduck/pull/500",
+          "title": "duck-sim: name the shipped gait, not the legacy pair, so the duck walks",
+          "state": "open",
+          "draft": false,
+          "merged_at": null,
+          "created_at": "2026-10-29T22:41:14Z",
+          "updated_at": "2026-10-29T22:41:14Z",
+          "head_sha": "34fceb53f5caa980b78840162a5c5afa38888704",
+          "base_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
+          "review": {
+            "scope": "One commit/one shell script, local simulator startup configuration only.",
+            "change": "Select existingvelstand.onnx as walk, omit separate stand, set simulated action_scale1.0 and default to backlash scene only when DUCK_SIM_SCENE is unset; explicitly empty still selects simulator default rigid scene.",
+            "local_policy_resolution": "A local policies/ directory wins only if it containsvelstand.onnx; otherwise cached/current set or seed fetch is tried. Custom HD1910 model names require explicit review.",
+            "fixed_manifest_source": {
+              "url": "https://huggingface.co/pollen-robotics/microduck-policies/resolve/665ae4eb20bfe13bca1ef4ea6d4bb6b4a096e448/manifest.json",
+              "commit": "665ae4eb20bfe13bca1ef4ea6d4bb6b4a096e448",
+              "JSON_sha256": "c566390738dd90a54c1e2de829aaab0e904c636949e2c2c6158ee7bbb889b818",
+              "robot": "officialXL330, hw_rev1,50Hz",
+              "obs_len": 61,
+              "action_len": 14,
+              "walk_slot": "velstand.onnx",
+              "training_task": "Mjlab-VelStand-Rough-Backlash-MicroDuck",
+              "weights_downloaded": false
+            },
+            "scene_source": {
+              "repo": "pollen-robotics/microduck_rl",
+              "commit": "bae39f5900b318f7e87fc485c30a31213cfa14eb",
+              "path": "src/mjlab_microduck/robot/microduck/scene_backlash.xml",
+              "blob_sha": "451fb3000b6178590868578f42426d546a796d69"
+            },
+            "verification": {
+              "author_reported": "HeadlessmacOSarm64 with officialv8 set:3eight-second drives atvx0.15, displacements0.697/0.696/0.691m; oldsetup0.007m in7.7s. duck-control89pass/10ignored; shellcheck clean.",
+              "tracker": "Read fixed script and actual v8 JSON manifest; verified pinnedRLscene path. No model binary download, simulator/script/test execution or robot access."
+            },
+            "priority": "medium_for_local_official_simulator_startup; no automatic_real_robot_migration",
+            "impact": "Proposed fix for stand-but-no-walk simulator setup, not new weights/training or proof of HD1910 behavior. Simulation scale1.0 and XL330/backlash model must not be treated as verified Feetech BAM settings.",
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/7d866d0f864c9b6f19ec6b7762ec2341520db3cc...34fceb53f5caa980b78840162a5c5afa38888704",
+            "commit_count": 1,
+            "file_count": 1,
+            "api_version": 46,
+            "replica_integration": "not_integrated; no runtime/model/image/hardware or online-page change by tracker"
+          }
+        },
+        {
+          "number": 495,
+          "url": "https://github.com/pollen-robotics/microduck/pull/495",
+          "title": "kinematics: head collision geoms and articulated lower beak",
+          "state": "open",
+          "draft": false,
+          "merged_at": null,
+          "created_at": "2026-10-29T17:46:48Z",
+          "updated_at": "2026-10-29T17:46:59Z",
+          "head_sha": "1757b6700840973e7c7c0f0819da6fb712dfcc48",
+          "base_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
+          "review": {
+            "scope": "One commit/two files: alpha FK MJCF resource plus two regression tests; not a training-scene or real mouth-control implementation.",
+            "change": "Adds capsule head-shell and box upper/lower beak collision geoms, lower_beak child body, jaw hinge0..0.7rad, lower_beak_tip site and8g lower-beak inertia.",
+            "source_observations": {
+              "old_geom_count": 0,
+              "new_geom_count": 3,
+              "old_joint_count": 14,
+              "new_joint_count": 15,
+              "jaw_index": 9,
+              "right_leg_indices_shift": true,
+              "existing_head_camera_ToF_sites_changed": false,
+              "FK_parser": "Reads body/joint/site only; ignores geoms, inertials, actuators and sensors. Model arrays must cover every model joint; resolve names rather than assuming old14-joint order.",
+              "fixture": "Existing MuJoCo parity fixture sizes the array using num_joints and fills by name; added jaw remains zero in old samples, so old-site parity does not validate new jaw contact physics.",
+              "head_helper": "Existing HeadFk uses32-element scratch storage and named head indices, sliced to num_joints; joint-count change alone is not evidence this helper fails.",
+              "training_scene": "duck-sim launches microduck_rl scene; PR495 does not modify that repo, add actuator, retrain or change robotd jaw control."
+            },
+            "verification": {
+              "author_reported": "2 new tests pass after failing before change;1794 workspace tests excludingLinux-only NFC and kinematics clippy reported passed.",
+              "new_tests_scope": "XML geom presence and FK jaw-tip movement, not MuJoCo collision force/grasp-success tests.",
+              "tracker": "Read fixed patches, parser, model mapping, old fixture and head helper; parsed XML as data to compare joint names. No downloaded implementation/test/simulator execution."
+            },
+            "priority": "medium_for_future_head_contact_simulation; deferred_for_current_HD1910_image",
+            "impact": "Review alpha-versus-Feetech geometry, added inertia and model15-joint mapping separately from14-action policy and15physical-servo conventions; no new camera calibration/ToF acquisition or HD1910 grasp validation.",
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/7d866d0f864c9b6f19ec6b7762ec2341520db3cc...1757b6700840973e7c7c0f0819da6fb712dfcc48",
+            "commit_count": 1,
+            "file_count": 2,
+            "api_version": 46,
+            "replica_integration": "not_integrated; no runtime/model/image/hardware or online-page change by tracker"
+          }
+        },
+        {
+          "number": 496,
+          "url": "https://github.com/pollen-robotics/microduck/pull/496",
+          "title": "docs: give a code contributor an ordered start-here path in docs/README.md",
+          "state": "open",
+          "draft": false,
+          "merged_at": null,
+          "created_at": "2026-10-29T18:42:06Z",
+          "updated_at": "2026-10-29T18:42:06Z",
+          "head_sha": "7fa9ffbe0cf7d3f338145948945663a5171c6c0f",
+          "base_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
+          "review": {
+            "scope": "One commit/one Markdown file, adding10lines of contributor navigation only.",
+            "change": "Ordered path through contribution guide, tests, simulation, architecture, dev-push, conventions and troubleshooting.",
+            "verification": "Fixed-tree link targets checked. Author reports source tests excludingNFC; tracker did not run commands. This PR does not add runtime mechanism or change build/test policy.",
+            "priority": "low_documentation_reference",
+            "impact": "No HD1910, camera, ToF, model management, training behavior, motion or sound implementation change.",
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/7d866d0f864c9b6f19ec6b7762ec2341520db3cc...7fa9ffbe0cf7d3f338145948945663a5171c6c0f",
+            "commit_count": 1,
+            "file_count": 1,
+            "api_version": 46,
+            "replica_integration": "not_integrated; no runtime/model/image/hardware or online-page change by tracker"
+          }
+        },
+        {
           "number": 494,
           "url": "https://github.com/pollen-robotics/microduck/pull/494",
           "title": "robot-boot-check: decide once the daemons settle, not 180 s in",
@@ -3718,28 +3828,23 @@
       "status": "Existing official article newly indexed in this snapshot; contact odometry and official validation are not replica hardware validation."
     }
   ],
-  "checked_at_utc": "2026-10-29T17:06:39.467453+00:00",
+  "checked_at_utc": "2026-10-30T07:08:17.085002+00:00",
   "latest_review": {
-    "default_branch_changes": true,
-    "new_stable_release": true,
+    "default_branch_changes": false,
+    "new_stable_release": false,
     "stable_release_tag": "daemon-v0.18.1",
     "stable_release_actual_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
+    "stable_assets_changed": false,
+    "previous_tracked_prs_merged": false,
     "new_pull_requests": {
       "pollen-robotics/microduck": [
-        494
+        495,
+        496,
+        500
       ]
     },
-    "new_related_pull_requests": {
-      "pollen-robotics/microduck_yocto": [
-        75
-      ]
-    },
-    "previous_tracked_prs_merged": false,
     "new_development_releases": [],
-    "moved_development_tags": [
-      "daemon-dev-main",
-      "daemon-dev-stress-test"
-    ],
+    "moved_development_tags": [],
     "retired_development_tags": [],
     "official_blog_new_articles": false,
     "official_blog_article_count": 3,
@@ -3748,18 +3853,7 @@
     "models_replaced": false,
     "robot_connected": false,
     "image_built_or_published": false,
-    "notes": "Official0.18.1/API46 released16:49:37UTC at7d866d0; boot-check settling watch replaces fixed180s wait. Main3commits14files; total41commits57files since replica0.17.9upstream pin. GitHub8asset metadata plus2smallJSONmanifests verified without software download/signature/install. RelatedYocto75 merged during review at a7d1468, all8 source blobs match the fixed PR; no containing OS image/channel or hardware acceptance verified. Daemonrelease alone does not replace an existing installedOSgate. Stress dev0c3 imports known0.18.0main and adds sampled per-joint current stats, not new durability measurements or HD1910 current acceptance. Other default heads, priorPRstates/heads/bodies, model metadata and blog unchanged. Local migration/image/online services unchanged.",
-    "asset_followup": {
-      "initial_asset_count": 0,
-      "initial_checked_at_utc": "2026-10-29T17:00:11.141450+00:00",
-      "asset_count": 8,
-      "checked_at_utc": "2026-10-29T17:02:52.862028+00:00"
-    },
-    "related_pull_requests_merged": {
-      "pollen-robotics/microduck_yocto": [
-        75
-      ]
-    }
+    "notes": "Three open PRs only:500 local duck-sim gait/scene/scale configuration using existingXL330v8 model;495 alpha kinematics asset geoms and jaw adds15th model joint but no RLscene/actuator/training integration;496 contributor navigation only. Read fixed differences and text/data references, no code/test/simulator or model-weight execution. Four default heads, stable0.18.1/eightasset metadata, existingdevtags and PRs includingrelatedYocto75, model metadata and three-article blog unchanged. Local migration/image/hardware acceptance unchanged."
   },
   "replica_migration": {
     "recorded_on": "2026-10-27",
