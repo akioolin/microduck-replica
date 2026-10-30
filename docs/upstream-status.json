@@ -2397,22 +2397,96 @@
           "draft": false,
           "merged_at": null,
           "created_at": "2026-10-27T08:23:52Z",
-          "updated_at": "2026-10-27T08:23:52Z",
+          "updated_at": "2026-10-30T08:07:28Z",
           "url": "https://github.com/pollen-robotics/microduck/pull/474",
-          "head_sha": "b8f8571eeebf8152355af18e55ad0269a3c392d1",
+          "head_sha": "14e096948d631356318c779c0e4a3c74b150f162",
           "base_sha": "96b89d8613f06722c1d64ce75ab0d7124fed9d8f",
           "base_branch": "main",
-          "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/96b89d8613f06722c1d64ce75ab0d7124fed9d8f...b8f8571eeebf8152355af18e55ad0269a3c392d1",
-          "scope_note": "Classic bonded trusted gamepads get2s settle and up to3 reconnect attempts with8s call bound; background sweep sleeps12s, skips pairing lock contention and all candidates while any paired pad is connected. LE/untrusted/non-gamepad excluded.",
+          "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/96b89d8613f06722c1d64ce75ab0d7124fed9d8f...14e096948d631356318c779c0e4a3c74b150f162",
+          "scope_note": "Retains classic paired/trusted/gamepad filtering, pairing lock and no reconnect while a paired pad is connected. New global sleep interval12->24->48->96->120s when a sweep reports failed proxy/connect or timeout; no-candidate/success/pairing-busy and outer device-query errors reset12s. Each sweep duration is additional, not a fixed wall-clock reconnect guarantee.",
           "priority": "high_candidate_for_classic_pad_link_drop; pendingPR does not prove padd HID/key recognition fixed",
           "replica_integration": "not_integrated_by_tracker_or_existing_migration; no release/image/device update",
           "submitter_validation": {
             "configd_tests_reported_passed": 63,
             "submitter_hardware": "beta board plus8BitDo Pro2 NES mode; reconnection/pairing reported",
             "replica_hardware_tested": false,
-            "verified_by_tracker": false
+            "verified_by_tracker": false,
+            "reported_for_initial_submission_head": "b8f8571eeebf8152355af18e55ad0269a3c392d1",
+            "new_backoff_revision_validation": "No new run or radio/video measurement reported in unchanged PR body or new commit message; not certified by tracker."
           },
-          "this_review": "Read-only fixed patch and local provenance inspection; no downloaded source execution, new tests, robot or service operation."
+          "this_review": "Read all4 fixed patches plus complete reconnect loop/filter and IPC API source. No new test functions in this increment; old PR body unchanged. No downloaded code/test/radio/device/online-page execution.",
+          "history": [
+            {
+              "number": 474,
+              "title": "configd: re-page a bonded pad whose link dropped, and sweep for the rest",
+              "state": "open",
+              "draft": false,
+              "merged_at": null,
+              "created_at": "2026-10-27T08:23:52Z",
+              "updated_at": "2026-10-27T08:23:52Z",
+              "url": "https://github.com/pollen-robotics/microduck/pull/474",
+              "head_sha": "b8f8571eeebf8152355af18e55ad0269a3c392d1",
+              "base_sha": "96b89d8613f06722c1d64ce75ab0d7124fed9d8f",
+              "base_branch": "main",
+              "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/96b89d8613f06722c1d64ce75ab0d7124fed9d8f...b8f8571eeebf8152355af18e55ad0269a3c392d1",
+              "scope_note": "Classic bonded trusted gamepads get2s settle and up to3 reconnect attempts with8s call bound; background sweep sleeps12s, skips pairing lock contention and all candidates while any paired pad is connected. LE/untrusted/non-gamepad excluded.",
+              "priority": "high_candidate_for_classic_pad_link_drop; pendingPR does not prove padd HID/key recognition fixed",
+              "replica_integration": "not_integrated_by_tracker_or_existing_migration; no release/image/device update",
+              "submitter_validation": {
+                "configd_tests_reported_passed": 63,
+                "submitter_hardware": "beta board plus8BitDo Pro2 NES mode; reconnection/pairing reported",
+                "replica_hardware_tested": false,
+                "verified_by_tracker": false
+              },
+              "this_review": "Read-only fixed patch and local provenance inspection; no downloaded source execution, new tests, robot or service operation."
+            }
+          ],
+          "previous_head_sha": "b8f8571eeebf8152355af18e55ad0269a3c392d1",
+          "latest_increment": {
+            "from_sha": "b8f8571eeebf8152355af18e55ad0269a3c392d1",
+            "to_sha": "14e096948d631356318c779c0e4a3c74b150f162",
+            "commit_count": 1,
+            "file_count": 4,
+            "fixed_diff_url": "https://github.com/pollen-robotics/microduck/compare/b8f8571eeebf8152355af18e55ad0269a3c392d1...14e096948d631356318c779c0e4a3c74b150f162",
+            "files": [
+              "configd/src/bluez.rs",
+              "configd/src/main.rs",
+              "configd/src/pad.rs",
+              "docs/project/pad-minimal-pairing.md"
+            ],
+            "change": "Global reconnect backoff; one unbuildable BlueZ proxy no longer skips other candidates; required internal Pads method with explicit FakePads no-op; MACs in post-bond logs; docs distinguish classic and LE.",
+            "internal_trait_contract": "Pads::reconnect_bonded is now required and returns bool; no new external IPC method.",
+            "api_version": 44,
+            "intended_benefit": "Fewer futile classic pages for a pad left switched off, intended to reduce shared Bluetooth/Wi-Fi radio use; no measured video/airtime improvement provided in this increment.",
+            "backoff_semantics": {
+              "initial_sleep_s": 12,
+              "maximum_sleep_s": 120,
+              "doubling_sleep_s": [
+                12,
+                24,
+                48,
+                96,
+                120
+              ],
+              "scope": "One global interval for the sweep, not per-pad scheduling.",
+              "true": "Any candidate proxy failure, Connect refusal or8s timeout causes backoff.",
+              "false": "No eligible candidate, all Connect calls return success, or pairing lock busy resets to12s.",
+              "outer_error": "Device-list query error logs and resets12s instead of backing off.",
+              "wake": "No immediate wake of sleeping loop was added; author expects a switched-on classic pad to page robot. The loop observes/reset on a later sweep.",
+              "HID": "D-Bus Connect success is not padd opening HID or receiving buttons; sweep adds no such verification."
+            },
+            "verification": "Read all4 fixed patches plus complete reconnect loop/filter and IPC API source. No new test functions in this increment; old PR body unchanged. No downloaded code/test/radio/device/online-page execution."
+          },
+          "comparison_to_recorded_main": {
+            "from_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
+            "to_sha": "14e096948d631356318c779c0e4a3c74b150f162",
+            "status": "diverged",
+            "ahead_by": 2,
+            "behind_by": 41,
+            "merge_base_sha": "96b89d8613f06722c1d64ce75ab0d7124fed9d8f",
+            "fixed_url": "https://github.com/pollen-robotics/microduck/compare/7d866d0f864c9b6f19ec6b7762ec2341520db3cc...14e096948d631356318c779c0e4a3c74b150f162",
+            "scope_note": "Old0.17.9/API44 base with2 feature commits; not a current0.18.1 replacement or merged release."
+          }
         },
         {
           "number": 473,
@@ -3828,7 +3902,7 @@
       "status": "Existing official article newly indexed in this snapshot; contact odometry and official validation are not replica hardware validation."
     }
   ],
-  "checked_at_utc": "2026-10-30T07:08:17.085002+00:00",
+  "checked_at_utc": "2026-10-30T08:10:06.313270+00:00",
   "latest_review": {
     "default_branch_changes": false,
     "new_stable_release": false,
@@ -3836,12 +3910,11 @@
     "stable_release_actual_sha": "7d866d0f864c9b6f19ec6b7762ec2341520db3cc",
     "stable_assets_changed": false,
     "previous_tracked_prs_merged": false,
-    "new_pull_requests": {
-      "pollen-robotics/microduck": [
-        495,
-        496,
-        500
-      ]
+    "new_pull_requests": {},
+    "changed_pull_request_heads": {
+      "pollen-robotics/microduck": {
+        "474": "14e096948d631356318c779c0e4a3c74b150f162"
+      }
     },
     "new_development_releases": [],
     "moved_development_tags": [],
@@ -3853,7 +3926,7 @@
     "models_replaced": false,
     "robot_connected": false,
     "image_built_or_published": false,
-    "notes": "Three open PRs only:500 local duck-sim gait/scene/scale configuration using existingXL330v8 model;495 alpha kinematics asset geoms and jaw adds15th model joint but no RLscene/actuator/training integration;496 contributor navigation only. Read fixed differences and text/data references, no code/test/simulator or model-weight execution. Four default heads, stable0.18.1/eightasset metadata, existingdevtags and PRs includingrelatedYocto75, model metadata and three-article blog unchanged. Local migration/image/hardware acceptance unchanged."
+    "notes": "OpenPR474 advanced onecommit/fourfiles: global12s-to120s reconnect backoff and proxy/log/internal-trait/doc cleanup. Still old0.17.9/API44 base, diverged2ahead41behind stable0.18.1. No new HID input verification, video/airtime data or backoff hardware validation; old63-test/beta8BitDo report kept with initial source SHA. All four default heads, stable/dev releases and assets, otherPRs includingYocto75, model metadata and blog unchanged. No runtime/image/migration/device or online-page changes."
   },
   "replica_migration": {
     "recorded_on": "2026-10-27",
